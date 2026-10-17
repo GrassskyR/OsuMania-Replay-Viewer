@@ -112,12 +112,17 @@ per time window** (a 3-minute map is typically 10–50 images, not 10,000 frames
 filter graph animate the scroll:
 
 ```
-color=s=WxH,fps=60[bg]; [bg][png]overlay=y=-h+H+t*fps*speed:shortest=1[v]; [v]trim=end=<sliceDuration>
+color=s=WxH,fps=60[bg]; [bg][png]overlay=y=-h+H+round(t*fps)*speed:shortest=1:format=yuv444[v]; [v]trim=end=<sliceDuration>
 ```
 
 So the renderer is cheap and ffmpeg does the work. This is also why the original's
 `ffmpegMaxProcessingSize` (20) chunking exists: a single `-filter_complex` with hundreds of inputs
 explodes. That behaviour is preserved.
+
+Scrolling overlays are composited in YUV 4:4:4 before encoding to YUV 4:2:0. This avoids FFmpeg's
+two-pixel overlay alignment turning an odd speed such as 29 into alternating 28/30-pixel steps,
+while keeping the final video compatible with standard H.264 players. Scroll positions use whole
+frame steps to avoid occasional one-pixel errors from floating-point timestamps.
 
 ---
 

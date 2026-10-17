@@ -4,8 +4,8 @@ using ManiaReplayMaster.Encode.Compat;
 namespace ManiaReplayMaster.RenderEncode.Tests;
 
 /// <summary>
-/// Pins the exact ffmpeg argv produced by the port against the reference implementation
-/// (<c>Encoder.kt</c>). These tests never launch ffmpeg: the whole command line, filter graph
+/// Pins the ffmpeg argv against the reference implementation (<c>Encoder.kt</c>), including
+/// the documented profile and pixel-alignment fixes. These tests never launch ffmpeg: the whole command line, filter graph
 /// included, is the highest-value regression surface of the encode layer.
 /// </summary>
 public class EncoderCommandLineTests
@@ -52,7 +52,7 @@ public class EncoderCommandLineTests
         };
 
     [Fact]
-    public void FinalSinglePass_MatchesReferenceCommandLineExactly()
+    public void FinalSinglePass_MatchesReferenceWithCompatibilityFixes()
     {
         var expected = new List<string>
         {
@@ -61,10 +61,10 @@ public class EncoderCommandLineTests
             "-r", "1", "-loop", "1", "-i", $@"{ImageDir}\v_1.png",
             "-filter_complex",
             "color=s=540*960,fps=60[bg0];" +
-            "[bg0][1]overlay=y=-h+H+t*1200:shortest=1[video0l];" +
+            "[bg0][1]overlay=y=-h+H+round(t*60)*20:shortest=1:format=yuv444[video0l];" +
             "[video0l]trim=end=2.5[video0];" +
             "color=s=540*960,fps=60[bg1];" +
-            "[bg1][2]overlay=y=-h+H+t*1200:shortest=1[video1l];" +
+            "[bg1][2]overlay=y=-h+H+round(t*60)*20:shortest=1:format=yuv444[video1l];" +
             "[video1l]trim=end=2.5[video1];" +
             "[video0][video1]concat=n=2:v=1[video];" +
             "[0:a]atempo=1.0[a1];" +
@@ -73,6 +73,7 @@ public class EncoderCommandLineTests
             "-map", "[audio]",
             "-c:v", "libx264",
             "-preset:v", "ultrafast",
+            "-pix_fmt", "yuv420p",
             // NOTE: no "-profile:v" here. The reference always emits "-profile:v <profile>", but its
             // shipped default is the literal string "unknown", which libx264 rejects outright
             // ("x264 [error]: invalid profile: unknown"). The port omits the flag unless the value
@@ -95,15 +96,16 @@ public class EncoderCommandLineTests
             "-r", "1", "-loop", "1", "-i", $@"{ImageDir}\v_1.png",
             "-filter_complex",
             "color=s=540*960,fps=60[bg0];" +
-            "[bg0][0]overlay=y=-h+H+t*1200:shortest=1[video0l];" +
+            "[bg0][0]overlay=y=-h+H+round(t*60)*20:shortest=1:format=yuv444[video0l];" +
             "[video0l]trim=end=2.5[video0];" +
             "color=s=540*960,fps=60[bg1];" +
-            "[bg1][1]overlay=y=-h+H+t*1200:shortest=1[video1l];" +
+            "[bg1][1]overlay=y=-h+H+round(t*60)*20:shortest=1:format=yuv444[video1l];" +
             "[video1l]trim=end=2.5[video1];" +
             "[video0][video1]concat=n=2:v=1[video]",
             "-map", "[video]",
             "-c:v", "libx264",
             "-preset:v", "ultrafast",
+            "-pix_fmt", "yuv420p",
             "-benchmark",
             $@"{OutDir}\v.mp4"
         };
@@ -120,7 +122,7 @@ public class EncoderCommandLineTests
 
         var graph = FilterGraph(actual);
         Assert.Contains("[video0l]trim=end=2.5,transpose=1[video0]", graph);
-        Assert.Contains("[bg0][0]overlay=y=-h+H+t*1200:shortest=1[video0l];", graph);
+        Assert.Contains("[bg0][0]overlay=y=-h+H+round(t*60)*20:shortest=1:format=yuv444[video0l];", graph);
     }
 
     [Fact]
@@ -146,6 +148,7 @@ public class EncoderCommandLineTests
             "-map", "[audio]",
             "-c:v", "libx264",
             "-preset:v", "ultrafast",
+            "-pix_fmt", "yuv420p",
             "-benchmark",
             $@"{OutDir}\v.mp4"
         };
@@ -183,7 +186,7 @@ public class EncoderCommandLineTests
     }
 
     [Fact]
-    public void OverlayScrollIsFramePerSecondTimesSpeed()
+    public void OverlayScrollUsesWholeFramesAtConfiguredRateAndSpeed()
     {
         var request = VideoRequest(imageCount: 1, isFinal: false) with
         {
@@ -193,7 +196,7 @@ public class EncoderCommandLineTests
 
         var graph = FilterGraph(FfmpegCommandBuilder.BuildVideo(request));
 
-        Assert.Contains("overlay=y=-h+H+t*750:shortest=1", graph);
+        Assert.Contains("overlay=y=-h+H+round(t*30)*25:shortest=1", graph);
     }
 
     /// <summary>

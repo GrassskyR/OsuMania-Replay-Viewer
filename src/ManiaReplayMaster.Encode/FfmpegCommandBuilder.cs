@@ -1,4 +1,3 @@
-using System.Globalization;
 using ManiaReplayMaster.Encode.Compat;
 
 namespace ManiaReplayMaster.Encode;
@@ -69,7 +68,8 @@ public sealed record FfmpegMergeRequest
 }
 
 /// <summary>
-/// Builds the exact ffmpeg argv of the reference implementation (rewrite plan route E1).
+/// Builds the ffmpeg argv of the reference implementation (rewrite plan route E1), with
+/// documented compatibility and pixel-alignment fixes.
 ///
 /// These methods are pure and deliberately public: the ffmpeg command line -- in particular the
 /// whole <c>-filter_complex</c> string -- is the highest-value regression surface of this layer,
@@ -104,7 +104,9 @@ public static class FfmpegCommandBuilder
         var outVideos = new List<string>();
         var count = request.ImagePaths.Count;
         var isTaikoSuffix = request.IsTaiko ? ",transpose=1" : string.Empty;
-        var overlayScroll = (request.FramePerSecond * request.Speed).ToString(CultureInfo.InvariantCulture);
+        // Round the time back to a whole frame before applying the pixel step: floating-point
+        // t * fps * speed can land just below an integer and intermittently lose one pixel.
+        var overlayScroll = FormattableString.Invariant($"round(t*{request.FramePerSecond})*{request.Speed}");
 
         for (var i = 0; i < count; i++)
         {
@@ -115,8 +117,11 @@ public static class FfmpegCommandBuilder
             // depend on the machine's decimal separator or digit shapes.
             filterGraph.Add(FormattableString.Invariant(
                 $"color=s={request.GameWidth}*{request.GameHeight},fps={request.FramePerSecond}[bg{i}]"));
+            // A 4:2:0 overlay rounds y to even pixels, causing odd scroll speeds (e.g. 29)
+            // to alternate between 28 and 30 pixels per frame. Composite in 4:4:4 first;
+            // convert to playback-compatible 4:2:0 only when encoding the finished frame.
             filterGraph.Add(FormattableString.Invariant(
-                $"[bg{i}][{inputFileIndex}]overlay=y=-h+H+t*{overlayScroll}:shortest=1[video{i}l]"));
+                $"[bg{i}][{inputFileIndex}]overlay=y=-h+H+{overlayScroll}:shortest=1:format=yuv444[video{i}l]"));
             filterGraph.Add(
                 $"[video{i}l]trim=end={JavaDouble.ToString(request.SliceDuration)}{isTaikoSuffix}[video{i}]");
 
@@ -200,7 +205,7 @@ public static class FfmpegCommandBuilder
     };
 
     /// <summary>
-    /// <c>-c:v {codec} -preset:v {codecPreset} [-profile:v {codecProfile}] -benchmark {out}</c>.
+    /// <c>-c:v {codec} -preset:v {codecPreset} -pix_fmt yuv420p [-profile:v {codecProfile}] -benchmark {out}</c>.
     ///
     /// DELIBERATE DIVERGENCE FROM THE REFERENCE. <c>Encoder.kt</c> always emits
     /// <c>-profile:v {codecProfile}</c>, and the shipped <c>Config</c> default is the literal
@@ -218,6 +223,8 @@ public static class FfmpegCommandBuilder
         command.Add(codec);
         command.Add("-preset:v");
         command.Add(codecPreset);
+        command.Add("-pix_fmt");
+        command.Add("yuv420p");
 
         if (!string.IsNullOrWhiteSpace(codecProfile) && KnownH264Profiles.Contains(codecProfile.Trim()))
         {
