@@ -4,6 +4,7 @@ using ManiaReplayMaster.Encode;
 
 namespace ManiaReplayMaster.RenderEncode.Tests;
 
+[Trait("Category", "EndToEnd")]
 public sealed class ScrollCadenceTests
 {
     [Theory]

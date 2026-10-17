@@ -6,7 +6,7 @@ namespace ManiaReplayMaster.Game;
 /// <summary>
 /// Streams <c>osu!.db</c> into an MD5 鈫?(folder, <c>.osu</c> file, ids, mode) index.
 ///
-/// Layout and the three version-gated details come from <c>docs/BEATMAPDB_FORMAT.md</c>, which was
+/// Layout and the three version-gated details come from <c>docs/FORMATS.md</c>, which was
 /// measured on the real 26 MB file (22,123 records, exact byte consumption, single trailing
 /// <c>int32</c>). The walk here covers every field of every record 鈥?including the timing-point and
 /// star-rating arrays, which together are about half the file 鈥?because the record length is
@@ -226,7 +226,7 @@ public static class BeatmapDatabaseReader
         {
             var message =
                 $"osu!.db byte consumption mismatch: parsed {consumed} of {length} bytes ({trailing} bytes left " +
-                $"after {parsed} records, version {version}). The layout in docs/BEATMAPDB_FORMAT.md does not hold " +
+                $"after {parsed} records, version {version}). The layout in docs/FORMATS.md does not hold " +
                 "for this file; the MD5 index would be unreliable and the Songs scan is used instead.";
             if (options.RequireExactByteConsumption)
             {
@@ -274,7 +274,7 @@ public static class BeatmapDatabaseReader
     }
 
     /// <summary>
-    /// Walks one record. Field order is the verified table in <c>docs/BEATMAPDB_FORMAT.md</c> 搂3;
+    /// Walks one record. Field order is the verified table in <c>docs/FORMATS.md</c> 搂3;
     /// the last <c>int32</c> + <c>byte</c> are opaque and deliberately unused.
     /// </summary>
     private static BeatmapIndexEntry ReadRecord(

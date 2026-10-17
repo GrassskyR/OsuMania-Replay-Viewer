@@ -1,0 +1,41 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build
+        run: ./build.ps1 build
+      - name: Unit and reference tests
+        run: ./build.ps1 test -- --no-build --no-restore
+      - name: Synthetic x86 memory checks
+        run: ./build.ps1 gamecheck -- memory32
+      - name: Install FFmpeg
+        run: choco install ffmpeg --yes --no-progress
+      - name: Export and frame cadence tests
+        run: |
+          $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
+          ./build.ps1 e2e -- --no-build --no-restore
+      - name: Publish self-contained application
+        run: ./build.ps1 publish
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ManiaReplayViewer-win-x64
+          path: artifacts/win-x64/
+          if-no-files-found: error

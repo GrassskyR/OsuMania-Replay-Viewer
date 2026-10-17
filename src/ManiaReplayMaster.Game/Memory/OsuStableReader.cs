@@ -1,3 +1,5 @@
+// Modified C# implementation based on tosu/gosumemory references; see THIRD-PARTY-NOTICES.md.
+// Distributed as part of Mania Replay Viewer under GPL-3.0-only.
 using System.Globalization;
 
 namespace ManiaReplayMaster.Game.Memory;

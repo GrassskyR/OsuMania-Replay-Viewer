@@ -1,145 +1,110 @@
 # Mania Replay Viewer
 
-A **Windows-native** replay renderer for **osu!mania** (plus osu!taiko and Malody), rewritten from the
-Kotlin/Java project [`Mania-Replay-Master`](https://github.com/Keytoyze/Mania-Replay-Master) as
-C# / .NET 8 + WPF. It turns a replay (`.osr` / `.mr`) and its beatmap (`.osu` / `.mc`) into an mp4
-showing the falling notes coloured by judgement.
+Windows 原生回放渲染工具，使用 C# / .NET 8 + WPF，将 osu!mania、osu!taiko 和 Malody 的谱面与回放渲染为 MP4。判定和渲染逻辑移植自 [Mania-Replay-Master](https://github.com/Keytoyze/Mania-Replay-Master)，不需要 Java。
 
-The one feature the original does not have: **osu! process integration**. Instead of only being able
-to render the map you just played, the app watches osu!stable and, when you open *any* score screen,
-resolves that score's replay file and beatmap file and pre-fills them — because `scores.db` is the
-index from a local score to its replay, and `Data\r` keeps those replay files forever.
+## 功能
 
----
+- 打开或拖入回放，按判定结果着色显示音符与操作。
+- 联动 osu!stable：在成绩界面识别当前成绩，自动定位本地回放与谱面。
+- 调整滚动速度、分辨率、FPS、编码器与预设；支持取消导出。
+- 中文 / English 即时切换；默认跟随系统，中文系统显示中文，其余显示英文。
+- 自动记忆语言、滚动速度、编码器和编码预设。
+- 使用 osu! 导出风格的可读视频名称，包括玩家、歌曲、难度和日期。
 
-## Status
+## 运行
 
-| Layer | State |
+需要 **Windows 10/11 x64** 与 **FFmpeg**。自行构建时可选择自包含发布，发布目录内的程序无需另装 .NET；普通构建产物需要 [.NET 8 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/8.0)。
+
+安装包含 `libx264` 和 AAC 编码器的 FFmpeg，将 `ffmpeg.exe` 放在应用程序旁，或加入 `PATH`。运行端的查找顺序为：显式路径、应用目录、当前目录、`PATH`、常见安装目录与 WinGet 链接。FFmpeg 不随程序分发。
+
+1. 启动 `ManiaReplayMaster.exe`。
+2. 拖入 `.osr` 或 `.mr`，也可通过“浏览”选择文件；osu! 谱面会尝试根据回放中的 MD5 自动定位。未找到时手动选择 `.osu` / `.osz`，Malody 使用 `.mc` / `.mcz`。
+3. 如需自动读取成绩，打开 osu!stable，启用自动检测与内存读取，再进入一条成绩的结果界面。可在 GUI 指定 osu! 安装目录。
+4. 调整参数与输出目录，点击“渲染”。“仅判定 / Judge only”只计算判定并输出统计，不生成视频，也不需要 FFmpeg。
+
+默认参数为 **540 × 960、60 FPS、流速 20、libx264 / ultrafast**。流速单位是像素/帧，改变 FPS 会影响相同流速下的滚动速度；硬件编码器及其预设需与本机 FFmpeg 和显卡支持情况匹配。
+
+视频命名示例：
+
+```text
+Player - Artist - Title [Difficulty] (2026-10-17) OsuMania.mp4
+```
+
+日期取回放的本地游玩日期；模式随回放变化。非法文件名字符替换为 `_`，过长名称缩短并加哈希后缀。Malody 或缺少必要元数据的回放使用原文件名。
+
+设置保存在 `%LOCALAPPDATA%/ManiaReplayViewer/ui-settings.json`，异常日志位于同目录的 `crash.log`。
+
+### 自动检测的范围
+
+内存联动面向 **osu!stable**，曾在 b20260924 的成绩界面验证；游戏更新后可能需要更新签名与字段偏移。osu!lazer 不在当前支持范围内。
+
+内存只提供成绩身份，程序再通过 `scores.db`、`osu!.db` 和本地回放头匹配实际文件。在线成绩必须先有本地下载或导出的回放；缺失的 `.osr` 无法从成绩信息重建。无匹配时可手动选择回放与谱面。进程访问使用只读 API。
+
+## 构建
+
+安装 [.NET 8 SDK x64](https://dotnet.microsoft.com/download/dotnet/8.0) 与 PowerShell。仓库的 `global.json` 指定最低 SDK 8.0.404，并允许使用更新的 .NET 8 feature band。
+
+```powershell
+./build.ps1 build       # Release 构建整个解决方案
+./build.ps1 app         # 构建并启动 GUI
+./build.ps1 test        # 不依赖 FFmpeg 的测试
+./build.ps1 e2e         # 视频导出、错误/取消和逐帧滚动测试
+./build.ps1 test-all    # 全部测试
+./build.ps1 publish     # 自包含 Windows x64 发布
+```
+
+发布目录为 `artifacts/win-x64/`。分发整个目录，包括中文资源、LICENSE、NOTICE、第三方声明及运行时许可文件；FFmpeg 需另行安装。发布不包含测试、谱面、回放和歌曲音频。
+
+脚本优先使用 `DOTNET_ROOT`，其次查找标准 x64 安装目录与 `PATH`。便携 SDK 可显式指定：
+
+```powershell
+./build.ps1 build -DotnetPath 'D:/Tools/dotnet8/sdk/dotnet.exe'
+./build.ps1 build -Configuration Debug
+```
+
+也可直接使用标准 .NET 命令：
+
+```powershell
+dotnet build ManiaReplayMaster.sln -c Release
+dotnet test ManiaReplayMaster.sln -c Release --filter 'Category!=EndToEnd'
+dotnet publish src/ManiaReplayMaster.App -c Release -r win-x64 --self-contained true -o artifacts/win-x64
+```
+
+NuGet 默认从 nuget.org 恢复，依赖包不纳入源码管理。离线环境可准备完整的本地 NuGet feed，再使用 `-PackageSource <目录>`（直接调用 dotnet 时使用 `-p:RestoreSources=<目录>`）。自包含发布还需要对应 SDK 选择的 Windows runtime packs。
+
+### 验证与诊断
+
+默认测试保留判定边界、四组 Java 参考输出逐字段对照、渲染、文件命名和 FFmpeg 命令构造检查。需要外部 FFmpeg 的测试统一标记为 `Category=EndToEnd`，使用 `e2e` 单独运行；需同时安装 `ffmpeg` 与 `ffprobe`，可用 `MRM_FFMPEG` 指定 ffmpeg 路径。
+
+```powershell
+./build.ps1 cli -- dump-judge 'map.osu' 'replay.osr' --out out/judgements.json
+./build.ps1 gamecheck -- memory32          # 构建并验证合成 x86 目标，无需启动游戏
+./build.ps1 gamecheck -- live --poll 3     # 只读诊断已运行的 osu!stable
+./build.ps1 gamecheck -- scoredb --root 'D:/osu!'
+./build.ps1 appcheck                      # 交互桌面上的 GUI 判定冒烟检查
+```
+
+`memory32` 自动发布自包含 x86 测试进程，无需另装 x86 .NET。GUI 与真实游戏检查按需手动运行；截图写入 `out/appcheck/`。GitHub Actions 在 Windows 上执行构建、单元测试、合成内存检查、FFmpeg 测试和自包含发布，并保留构建产物。
+
+## 项目结构
+
+| 目录 | 内容 |
 |---|---|
-| Core (parse + judge) | **Verified equal to the reference implementation**, field by field, on 14,672 notes / 15,149 actions across 4 fixtures |
-| Render + Encode | Working: real ffmpeg export verified (540×960, h264, 60 fps, AAC) |
-| CLI harness | Working |
-| WPF GUI | Builds and runs the same proven pipeline; not yet smoke-tested interactively |
-| osu! file-system detection (`scores.db`, `osu!.db`, `Data\r`) | Implemented against a measured format spec |
-| osu! in-memory score detection | **Live-verified on stable b20260924** — score screen → exact local replay + beatmap; WPF auto-fill verified (2026-10-17). See [calibration notes](docs/LIVE_MEMORY_FIX.md) |
+| `src/ManiaReplayMaster.Core` | 谱面、回放解析与判定 |
+| `src/ManiaReplayMaster.Render` | GDI+ 音符长图渲染 |
+| `src/ManiaReplayMaster.Encode` | FFmpeg 命令、进度与取消 |
+| `src/ManiaReplayMaster.Game` | osu! 检测、数据库索引、回放匹配及内存读取 |
+| `src/ManiaReplayMaster.App` | WPF 界面、本地化及设置 |
+| `src/ManiaReplayMaster.Cli` | 无界面的解析与判定工具 |
+| `tests/` | 回归测试与参考结果 |
+| `fixtures/` | 测试谱面和回放，不含歌曲音频 |
+| `tools/` | 可复用的 GUI 与游戏诊断工具 |
+| `docs/FORMATS.md` | 数据库布局及内存读取维护说明 |
 
-See [`docs/HANDOFF.md`](docs/HANDOFF.md) for the precise list of what is and is not verified, plus
-the environment quirks you need to build this.
+渲染器按时间窗口生成静态长图，再由 FFmpeg 按帧滚动、拼接并合成音频。滚动合成采用 YUV 4:4:4，最终输出常用的 YUV 4:2:0，避免奇数流速导致位移交替跳动。
 
----
+## 许可证
 
-## Requirements
+本项目整体采用 **[GPL-3.0](LICENSE)**。选择该许可是为了兼容现有内存实现参考来源中的 GPL/LGPL 代码，并保留原 Java 项目的 Apache-2.0 权利声明。允许使用、修改与再分发；分发修改版或二进制时须遵守 GPL 的许可证及对应源代码提供要求。
 
-- Windows 10/11, x64
-- **ffmpeg** (`ffmpeg.exe`). Looked up as: explicit path → next to the app → current directory → `PATH` → `C:\ffmpeg\ffmpeg.exe` → `%ProgramFiles%\ffmpeg\bin` → WinGet links.
-- For building: .NET 8 SDK. On this machine it lives at `D:\Tools\dotnet8\sdk` (see below).
-- Optional: an osu!stable install, for the auto-detection feature.
-
----
-
-## Build and run
-
-This machine has no usable system-wide .NET 8 SDK (the one on `PATH` is an x86 SDK 5.0.100, which
-cannot build `net8.0-windows`). A portable SDK is extracted to `D:\Tools\dotnet8\sdk`, and `global.json`
-pins `8.0.404`.
-
-Use the helper script — it sets `DOTNET_ROOT` for you:
-
-```powershell
-.\build.ps1 build                        # build the whole solution
-.\build.ps1 test                         # run every test project
-.\build.ps1 app                          # launch the WPF application
-.\build.ps1 e2e                          # render + encode one fixture end to end
-.\build.ps1 cli dump-judge <map> <replay> --out out.json
-```
-
-Or invoke the SDK directly:
-
-```powershell
-$env:DOTNET_ROOT = "D:\Tools\dotnet8\sdk"
-& "D:\Tools\dotnet8\sdk\dotnet.exe" build .\ManiaReplayMaster.sln -v q --nologo
-```
-
-### NuGet
-
-The machine cannot reach `api.nuget.org` (an offline TLS revocation check fails; you will see
-`NU1301`). `NuGet.config` therefore clears all remote sources and restores from the committed
-`packages/` directory. To add a package, download its `.nupkg` with plain `curl` (which works) into
-`packages/`:
-
-```powershell
-curl.exe -sSL --ssl-no-revoke -o "packages\my.package.1.0.0.nupkg" `
-  "https://api.nuget.org/v3-flatcontainer/my.package/1.0.0/my.package.1.0.0.nupkg"
-```
-
----
-
-## Using the app
-
-1. Drop a `.osr` onto the window (or use **Browse**).
-2. The beatmap is located automatically from the replay's embedded MD5. For Malody `.mr` files, pick the `.mc`/`.mcz` yourself.
-3. If osu! is running and auto-detect is on, the paths fill in by themselves; the **Detected score** row shows which score was recognised and offers a dropdown when several candidates match.
-4. Adjust speed / resolution / FPS / codec, then press **Render**. **Judge only** runs the judgement and prints the counts without encoding.
-5. Cancel is supported — it aborts rendering between windows and kills the running ffmpeg.
-
-The top-right language menu offers **System default / 中文 / English** and switches immediately.
-System default uses Simplified Chinese for any Chinese system UI language and English otherwise.
-Your selection is saved in `%LOCALAPPDATA%\ManiaReplayViewer\ui-settings.json`.
-Scroll speed, codec, and encoder preset are also remembered as you edit them and restored on the
-next launch. Changing the interface language preserves these render preferences.
-
-Videos are saved in the configured output directory as
-`Player - Artist - Title [Difficulty] (yyyy-MM-dd) OsuMania.mp4` (with the replay's mode and local play date).
-This also gives hash-named `Data\r` replays readable names. Invalid Windows filename characters are
-replaced with `_`; very long names are shortened with a hash suffix. Malody replays and files missing
-the naming metadata keep the original replay filename stem.
-
----
-
-## Project layout
-
-```
-src/ManiaReplayMaster.Core      pure logic (no UI/Win32): models, .osr/.osu/.mr/.mc parsers, judgers
-src/ManiaReplayMaster.Render    System.Drawing port of the original Render.kt (long-strip PNG slices)
-src/ManiaReplayMaster.Encode    ffmpeg command builder, process runner, progress, cancellation
-src/ManiaReplayMaster.Game      osu! locator, scores.db / osu!.db readers, replay resolver, memory reader
-src/ManiaReplayMaster.Cli       headless harness (dump-map / dump-replay / dump-judge / benchmark)
-src/ManiaReplayMaster.App       WPF GUI
-tests/                          unit + differential tests, and frozen reference JSON in tests/golden
-tools/                          validation harnesses (osu DB formats, end-to-end, game link)
-docs/                           format specs and the handoff notes
-fixtures/                       copied test beatmaps and replays
-```
-
-### How the rendering works (worth knowing before optimising anything)
-
-The original — and this port — does **not** render video frames. It draws **one static long-strip PNG
-per time window** (a 3-minute map is typically 10–50 images, not 10,000 frames) and lets ffmpeg's
-filter graph animate the scroll:
-
-```
-color=s=WxH,fps=60[bg]; [bg][png]overlay=y=-h+H+round(t*fps)*speed:shortest=1:format=yuv444[v]; [v]trim=end=<sliceDuration>
-```
-
-So the renderer is cheap and ffmpeg does the work. This is also why the original's
-`ffmpegMaxProcessingSize` (20) chunking exists: a single `-filter_complex` with hundreds of inputs
-explodes. That behaviour is preserved.
-
-Scrolling overlays are composited in YUV 4:4:4 before encoding to YUV 4:2:0. This avoids FFmpeg's
-two-pixel overlay alignment turning an odd speed such as 29 into alternating 28/30-pixel steps,
-while keeping the final video compatible with standard H.264 players. Scroll positions use whole
-frame steps to avoid occasional one-pixel errors from floating-point timestamps.
-
----
-
-## Licensing notes
-
-- This is a rewrite of an **Apache-2.0** project; keep that licence and attribution.
-- **ffmpeg is an external dependency** and is invoked as a separate process (never linked). The
-  default codec is `libx264`, which is **GPL-only** — if you distribute ffmpeg with the app you must
-  comply with the GPL, or switch to a non-GPL encoder (see §4.5 of the design document).
-- **Process memory reading is strictly read-only.** The app never injects, never writes to another
-  process, and never hooks. That is a deliberate design constraint: osu!'s rules forbid gaining an
-  advantage with third-party tools, not reading memory, and the risky techniques (DLL injection for
-  overlays) are exactly what this does not do. If this ever changes, the rules and the EULA both
-  become a problem.
+原项目、tosu、gosumemory 和运行依赖的来源与许可见 [NOTICE](NOTICE) 和 [第三方声明](THIRD-PARTY-NOTICES.md)。测试谱面与回放保留原作者权利；FFmpeg 的许可取决于其具体构建配置。

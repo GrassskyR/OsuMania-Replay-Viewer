@@ -2,7 +2,7 @@ namespace ManiaReplayMaster.Game;
 
 /// <summary>
 /// One local score record from <c>scores.db</c>. Field order and types are exactly the table in
-/// <c>docs/SCORESDB_FORMAT.md</c> §3 (verified there against all 5,420 records and the matching
+/// <c>docs/FORMATS.md</c> §3 (verified there against all 5,420 records and the matching
 /// <c>.osr</c> headers).
 /// </summary>
 public sealed record ScoreRecord

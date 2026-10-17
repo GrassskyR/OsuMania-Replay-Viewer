@@ -3,7 +3,7 @@ namespace ManiaReplayMaster.Game;
 /// <summary>
 /// The text primitives shared by every osu!stable binary format (<c>.osr</c>, <c>osu!.db</c>,
 /// <c>scores.db</c>, <c>collection.db</c>), reproduced one-to-one from
-/// <c>docs/SCORESDB_FORMAT.md</c> §1 and <c>docs/BEATMAPDB_FORMAT.md</c> §0.1.
+/// <c>docs/FORMATS.md</c> §1 and <c>docs/FORMATS.md</c> §0.1.
 ///
 /// Encoding: a single marker byte (<c>0x00</c> = null, anything else = string follows), then a
 /// 7-bit-encoded (LEB128) byte length, then that many UTF-8 bytes. <c>Encoding.UTF8</c> uses

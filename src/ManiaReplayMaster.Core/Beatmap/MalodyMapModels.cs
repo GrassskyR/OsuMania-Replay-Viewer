@@ -1,3 +1,5 @@
+// Modified C# port of Mania-Replay-Master (Apache-2.0).
+// Copyright (c) 2020-present, project contributors. See NOTICE and licenses/Apache-2.0.txt.
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ManiaReplayMaster.Core.Beatmap;

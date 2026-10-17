@@ -2,7 +2,7 @@ namespace ManiaReplayMaster.Game;
 
 /// <summary>
 /// One <c>osu!.db</c> record reduced to what beatmap resolution needs. The full 26 MB database is
-/// walked field by field (see <c>docs/BEATMAPDB_FORMAT.md</c> §3) because the record length is
+/// walked field by field (see <c>docs/FORMATS.md</c> §3) because the record length is
 /// variable; only the index-relevant fields are kept so the whole index fits in a few MB.
 /// </summary>
 public sealed record BeatmapIndexEntry

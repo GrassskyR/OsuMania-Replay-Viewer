@@ -164,7 +164,7 @@ public static class OsuReplayHeaderReader
     /// <summary>
     /// .NET ticks of 1601-01-01T00:00:00Z. Subtracting it from a score's .NET <c>DateTicks</c> yields
     /// the Windows FILETIME used in the <c>Data\r</c> file name
-    /// (<c>docs/SCORESDB_FORMAT.md</c> §4, 5,420/5,420 verified).
+    /// (<c>docs/FORMATS.md</c> §4, 5,420/5,420 verified).
     /// </summary>
     public const long DotNetTicksMinusFiletimeTicks = 504911232000000000L;
 

@@ -1,28 +1,17 @@
-# ---------------------------------------------------------------------------------------------
-# Mania Replay Viewer - ignore rules
-#
-# Deliberately NOT ignored (committed on purpose):
-#   packages/           offline NuGet feed. NuGet.org is unreachable on the build machine (offline
-#                       CRL check -> NU1301), so restore only works from this committed flat feed.
-#   tests/golden/       frozen reference JSON produced by the shipped v2.4.0 jar - the differential
-#                       evidence for the Core judgement layer. Large, but it is the test oracle.
-#   fixtures/           beatmaps/replays copied out of the game install (never written back to it).
-#   docs/app-smoke.png  UI smoke-test screenshot evidence.
-# ---------------------------------------------------------------------------------------------
-
-# Build output
+# Build, validation and publish output
 bin/
 obj/
 out/
 artifacts/
 TestResults/
+packages/
 
-# Render/encode artefacts - a video must never land in the repository
+# Rendered media and temporary logs
 *.mp4
 *.tmp
 *.log
 
-# IDE / editor / user-specific state
+# IDE and user state
 .vs/
 .vscode/
 .idea/
@@ -32,10 +21,8 @@ TestResults/
 *.sln.docstates
 *.sln.ide/
 
-# OS junk
+# OS files and local SDKs
 Thumbs.db
 desktop.ini
 .DS_Store
-
-# Portable .NET 8 SDK (large, machine-specific, re-extracted rather than committed)
 tools/dotnet8/

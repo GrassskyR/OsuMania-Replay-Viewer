@@ -766,7 +766,7 @@ internal static class Memory32Checks
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "WINDOWS_NATIVE_REWRITE_PLAN.md")))
+            if (File.Exists(Path.Combine(directory.FullName, "ManiaReplayMaster.sln")))
             {
                 return directory.FullName;
             }

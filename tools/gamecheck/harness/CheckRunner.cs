@@ -4,8 +4,7 @@ namespace ManiaReplayMaster.GameCheck;
 
 /// <summary>
 /// Minimal assertion recorder. Every check prints PASS/FAIL with the measured value, and the process
-/// exit code is the failure count's sign, so the harness doubles as the CI gate
-/// (<c>tools\gamecheck\run.ps1</c>).
+/// exit code is the failure count's sign, so the harness can run in CI.
 ///
 /// Output is UTF-8 (never raw bytes to a GBK console) — the harness writes a UTF-8 log file and only
 /// prints ASCII-safe lines.
@@ -32,19 +31,19 @@ public sealed class CheckRunner
 
     public void Detail(string message) => Write($"      {message}");
 
-    public void Pass(string what, string measured)
+    public void Pass(string what, string? measured)
     {
         _passed++;
         Write($"  PASS  {what}: {measured}");
     }
 
-    public void Fail(string what, string measured)
+    public void Fail(string what, string? measured)
     {
         _failed++;
         Write($"  FAIL  {what}: {measured}");
     }
 
-    public void Check(bool condition, string what, string measured)
+    public void Check(bool condition, string what, string? measured)
     {
         if (condition)
         {
@@ -78,7 +77,7 @@ public sealed class CheckRunner
     /// <summary>Records a check that could not be executed (no osu! install, no game session).</summary>
     public void Skip(string what, string reason) => Write($"  SKIP  {what}: {reason}");
 
-    public void Metric(string name, object value) => Write($"  METRIC {name} = {value}");
+    public void Metric(string name, object? value) => Write($"  METRIC {name} = {value}");
 
     public void WriteRaw(string message) => Write(message);
 

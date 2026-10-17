@@ -10,7 +10,7 @@ namespace ManiaReplayMaster.GameCheck;
 /// Reproducible validation harness for the game-link subsystem (M2a layer plus the memory layer).
 ///
 /// Every number quoted in the final report comes from here, and every command is read-only with
-/// respect to <c>D:\Game\osu</c>: files are opened with <see cref="FileShare.ReadWrite"/> and no code
+/// respect to the osu! installation: files are opened with <see cref="FileShare.ReadWrite"/> and no code
 /// path in this project writes to the game directory. The only writes are the harness's own caches
 /// and logs, which live under <c>%LOCALAPPDATA%\ManiaReplayMaster</c> and <c>tools/gamecheck/out</c>.
 ///
@@ -24,14 +24,13 @@ namespace ManiaReplayMaster.GameCheck;
 /// gamecheck watch        [--dir &lt;temp dir&gt;]
 /// gamecheck songsscan    [--sample 5]
 /// gamecheck memory32     [--helper &lt;path&gt;]
-/// gamecheck staticsig    [--exe &lt;osu!.exe&gt;] [--report &lt;path.md&gt;]
 /// gamecheck live         [--poll &lt;n&gt;]   (requires the game to be running)
 /// gamecheck all
 /// </code>
 /// </summary>
 public static class Program
 {
-    private const string DefaultOsuRoot = @"D:\Game\osu";
+    private static string? _manualRoot;
 
     public static int Main(string[] args)
     {
@@ -39,6 +38,7 @@ public static class Program
 
         var command = args.Length > 0 ? args[0].ToLowerInvariant() : "all";
         var rest = args.Skip(1).ToArray();
+        _manualRoot = ArgValue(rest, "--root") ?? Environment.GetEnvironmentVariable("MRM_OSU_ROOT");
         var runner = new CheckRunner();
         var outDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "out");
         outDir = Path.GetFullPath(outDir);
@@ -68,13 +68,8 @@ public static class Program
                 case "songsscan":
                     SongsScan(runner, rest);
                     break;
-                case "probe-headers":
-                return HeaderProbe.Run(rest.ToArray());
                 case "memory32":
                     Memory32(runner, rest);
-                    break;
-                case "staticsig":
-                    StaticSig(runner, rest);
                     break;
                 case "live":
                     Live(runner, rest);
@@ -88,7 +83,6 @@ public static class Program
                     Watch(runner, rest);
                     SongsScan(runner, rest);
                     Memory32(runner, rest);
-                    StaticSig(runner, rest);
                     break;
                 case "-h":
                 case "--help":
@@ -138,12 +132,10 @@ public static class Program
               watch                      FileSystemWatcher check against a temp directory
               songsscan                  Songs\*\*.osu MD5 scan + cache reuse
               memory32                   synthetic 32-bit target process checks
-              staticsig                  signature table vs. on-disk osu!.exe (no game needed)
               live                       real-machine calibration against a RUNNING osu! [--poll N]
-              all                        everything above
+              all                        file-system checks plus memory32 (excludes live)
 
             Options: --sample N  --hash-sample N  --root <osu root>  --helper <path>
-                     --exe <osu!.exe>  --report <path.md>
             """);
     }
 
@@ -152,7 +144,7 @@ public static class Program
     private static GameLocator Locate(CheckRunner runner, string[] args)
     {
         runner.Section("GameLocator");
-        var manual = ArgValue(args, "--root");
+        var manual = _manualRoot;
         var locator = manual is null ? GameLocator.Resolve() : GameLocator.Resolve(manual);
 
         foreach (var line in locator.Trace)
@@ -642,8 +634,6 @@ public static class Program
             }
         }
 
-        var level1Correct = 0;
-        var level1Found = 0;
         var withMemoryWrong = 0;
         var withoutMemoryCorrect = 0;
         var ambiguous = 0;
@@ -825,7 +815,7 @@ public static class Program
         runner.Section("ReplayDirectoryWatcher");
         var dir = ArgValue(args, "--dir");
         var temporary = dir is null;
-        if (temporary)
+        if (dir is null)
         {
             dir = Path.Combine(Path.GetTempPath(), "mrm-gamecheck-" + Guid.NewGuid().ToString("N")[..8]);
         }
@@ -1019,13 +1009,6 @@ public static class Program
         Memory32Checks.Run(runner, helper);
     }
 
-    // ------------------------------------------------------------------ static signatures
-
-    private static void StaticSig(CheckRunner runner, string[] args)
-    {
-        StaticSignatureChecks.Run(runner, args);
-    }
-
     // ------------------------------------------------------------------ live game
 
     private static void Live(CheckRunner runner, string[] args)
@@ -1037,16 +1020,14 @@ public static class Program
 
     private static GameLocator? RequireLocator()
     {
-        var manual = Environment.GetEnvironmentVariable("MRM_OSU_ROOT");
+        var manual = _manualRoot;
         var locator = manual is null ? GameLocator.Resolve() : GameLocator.Resolve(manual);
         if (locator.Found)
         {
             return locator;
         }
 
-        // The harness is typically invoked on the machine that has the reference install; fall back to
-        // the documented path so the check reports an honest failure instead of silently skipping.
-        return Directory.Exists(DefaultOsuRoot) ? GameLocator.Resolve(DefaultOsuRoot) : null;
+        return null;
     }
 
     private static List<T> SampleDeterministic<T>(IReadOnlyList<T> items, int count)

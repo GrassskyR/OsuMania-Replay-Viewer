@@ -1,92 +1,115 @@
-# Build/run helper for this repository.
-#
-# This machine has no system-wide .NET 8 SDK (only an x86 .NET 5 one), so the portable
-# SDK extracted to D:\Tools\dotnet8\sdk is used explicitly. NuGet is likewise unreachable,
-# so all packages are restored from the committed local feed in .\packages.
-#
-#   .\build.ps1 build        build the whole solution
-#   .\build.ps1 test         run every test project
-#   .\build.ps1 cli <args>   run the headless harness (mrm)
-#   .\build.ps1 app          run the WPF application
-#   .\build.ps1 appcheck     UI smoke test: drive the window, judge a fixture, verify numbers
-#   .\build.ps1 e2e          render + encode one fixture end to end
-#   .\build.ps1 gamecheck    run the game-integration validation harness
+# Requires Windows and a .NET 8 x64 SDK. See README.md for examples.
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
+    [ValidateSet('help', 'restore', 'build', 'test', 'test-all', 'e2e', 'publish', 'app', 'cli', 'appcheck', 'gamecheck')]
     [string]$Command = 'help',
-
+    [ValidateSet('Debug', 'Release')]
+    [string]$Configuration = 'Release',
+    [string]$DotnetPath = '',
+    [string]$PackageSource = '',
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Rest
 )
 
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
 
-$env:DOTNET_ROOT = 'D:\Tools\dotnet8\sdk'
+if ($Command -eq 'help') {
+    Write-Host @'
+Commands:
+  restore       Restore solution dependencies
+  build         Build the solution (Release by default)
+  test          Run tests that do not need FFmpeg
+  e2e           Run FFmpeg export, cancellation and scroll cadence tests
+  test-all      Run all tests (requires FFmpeg and ffprobe)
+  publish       Publish a self-contained Windows x64 app to artifacts/win-x64
+  app           Build and launch the WPF application
+  cli <args>    Run the parser/judgement CLI
+  appcheck      Build and run the interactive GUI smoke check
+  gamecheck     Run game diagnostics (default: help); pass memory32 or live explicitly
+
+Options: -Configuration Debug|Release, -DotnetPath <dotnet.exe>, -PackageSource <feed>
+CLI/gamecheck arguments follow --, for example: ./build.ps1 cli -- dump-map file.osu
+'@
+    exit 0
+}
+
+if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
+    throw 'This solution requires Windows (WPF, GDI+ and process memory APIs).'
+}
+
+if (-not $DotnetPath) {
+    if ($env:DOTNET_ROOT -and (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'dotnet.exe'))) {
+        $DotnetPath = Join-Path $env:DOTNET_ROOT 'dotnet.exe'
+    } elseif (Test-Path -LiteralPath (Join-Path $env:ProgramFiles 'dotnet/dotnet.exe')) {
+        $DotnetPath = Join-Path $env:ProgramFiles 'dotnet/dotnet.exe'
+    } else {
+        $DotnetPath = (Get-Command dotnet -ErrorAction Stop).Source
+    }
+}
+$DotnetPath = (Resolve-Path -LiteralPath $DotnetPath).Path
+$env:DOTNET_ROOT = Split-Path -Parent $DotnetPath
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
-$env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
 
-$dotnet = 'D:\Tools\dotnet8\sdk\dotnet.exe'
-$repo = $PSScriptRoot
-$sln = Join-Path $repo 'ManiaReplayMaster.sln'
-$packages = Join-Path $repo 'packages'
-
-if (-not (Test-Path $dotnet)) {
-    throw "Portable .NET 8 SDK not found at $dotnet. See README for how it is provisioned."
+$restoreOptions = @()
+if ($PackageSource) {
+    if (Test-Path -LiteralPath $PackageSource) {
+        $PackageSource = (Resolve-Path -LiteralPath $PackageSource).Path
+    }
+    $restoreOptions += "-p:RestoreSources=$PackageSource"
 }
+$forwarded = @($Rest | Where-Object { $_ -ne '--' })
+$solution = Join-Path $PSScriptRoot 'ManiaReplayMaster.sln'
+$appProject = Join-Path $PSScriptRoot 'src/ManiaReplayMaster.App/ManiaReplayMaster.App.csproj'
+$gameProject = Join-Path $PSScriptRoot 'tools/gamecheck/harness/ManiaReplayMaster.GameCheck.csproj'
 
 function Invoke-Dotnet {
     param([string[]]$Arguments)
-    & $dotnet @Arguments
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & $DotnetPath @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "dotnet failed (exit code $LASTEXITCODE)." }
 }
 
-switch ($Command) {
-    'build' {
-        if (Test-Path $sln) { Invoke-Dotnet @('build', $sln, '-v', 'q', '--nologo') }
-        else { Invoke-Dotnet @('build', (Join-Path $repo 'src\ManiaReplayMaster.App\ManiaReplayMaster.App.csproj'), '-v', 'q', '--nologo') }
-    }
-    'test' {
-        Invoke-Dotnet @('test', (Join-Path $repo 'tests\ManiaReplayMaster.Tests\ManiaReplayMaster.Tests.csproj'), '--nologo', '-v', 'q')
-        $gameTests = Join-Path $repo 'tests\ManiaReplayMaster.GameTests\ManiaReplayMaster.GameTests.csproj'
-        if (Test-Path $gameTests) { Invoke-Dotnet @('test', $gameTests, '--nologo', '-v', 'q') }
-        $renderTests = Join-Path $repo 'tests\ManiaReplayMaster.RenderEncode.Tests\ManiaReplayMaster.RenderEncode.Tests.csproj'
-        if (Test-Path $renderTests) { Invoke-Dotnet @('test', $renderTests, '--nologo', '-v', 'q') }
-    }
-    'cli' {
-        Invoke-Dotnet (@('run', '--project', (Join-Path $repo 'src\ManiaReplayMaster.Cli\ManiaReplayMaster.Cli.csproj'), '--no-launch-profile', '-v', 'q', '--') + $Rest)
-    }
-    'app' {
-        Invoke-Dotnet @('run', '--project', (Join-Path $repo 'src\ManiaReplayMaster.App\ManiaReplayMaster.App.csproj'))
-    }
-    'e2e' {
-        Invoke-Dotnet @('run', '--project', (Join-Path $repo 'tools\e2e\e2e.csproj'), '-v', 'q', '--nologo')
-    }
-    'gamecheck' {
-        # The harness lives one level below tools\gamecheck (its 32-bit synthetic target is a
-        # sibling under tools\gamecheck\x86target), so resolve the project path explicitly.
-        $gameCheck = Join-Path $repo 'tools\gamecheck\harness\ManiaReplayMaster.GameCheck.csproj'
-        if (-not (Test-Path $gameCheck)) { throw "Game-link harness not found at $gameCheck" }
-        if ($Rest.Count -gt 0) {
-            Invoke-Dotnet (@('run', '--project', $gameCheck, '-v', 'q', '--') + $Rest)
-        } else {
-            Invoke-Dotnet @('run', '--project', $gameCheck, '-v', 'q', '--', 'all')
+Push-Location $PSScriptRoot
+try {
+    Invoke-Dotnet @('--version')
+    switch ($Command) {
+        'restore' { Invoke-Dotnet (@('restore', $solution) + $restoreOptions + $forwarded) }
+        'build' { Invoke-Dotnet (@('build', $solution, '-c', $Configuration) + $restoreOptions + $forwarded) }
+        { $_ -in 'test', 'test-all', 'e2e' } {
+            $filter = @()
+            if ($Command -eq 'test') { $filter = @('--filter', 'Category!=EndToEnd') }
+            if ($Command -eq 'e2e') { $filter = @('--filter', 'Category=EndToEnd') }
+            Invoke-Dotnet (@('test', $solution, '-c', $Configuration, '--nologo') + $restoreOptions + $filter + $forwarded)
+        }
+        'publish' {
+            Invoke-Dotnet (@('publish', $appProject, '-c', $Configuration, '-r', 'win-x64',
+                '--self-contained', 'true', '-p:PublishTrimmed=false',
+                '-o', (Join-Path $PSScriptRoot 'artifacts/win-x64')) + $restoreOptions + $forwarded)
+        }
+        'app' { Invoke-Dotnet (@('run', '--project', $appProject, '-c', $Configuration) + $restoreOptions + @('--') + $forwarded) }
+        'cli' {
+            Invoke-Dotnet (@('run', '--project', (Join-Path $PSScriptRoot 'src/ManiaReplayMaster.Cli'),
+                '-c', $Configuration) + $restoreOptions + @('--') + $forwarded)
+        }
+        'gamecheck' {
+            if ($forwarded.Count -eq 0) { $forwarded = @('help') }
+            if ($forwarded[0] -eq 'memory32') {
+                $helperProject = Join-Path $PSScriptRoot 'tools/gamecheck/x86target/ManiaReplayMaster.X86Target.csproj'
+                $helperOutput = Join-Path $PSScriptRoot 'artifacts/gamecheck-x86'
+                Invoke-Dotnet (@('publish', $helperProject, '-c', $Configuration, '-o', $helperOutput) + $restoreOptions)
+                $forwarded += @('--helper', (Join-Path $helperOutput 'x86target.exe'))
+            }
+            Invoke-Dotnet (@('run', '--project', $gameProject, '-c', $Configuration) + $restoreOptions + @('--') + $forwarded)
+        }
+        'appcheck' {
+            Invoke-Dotnet (@('build', $appProject, '-c', $Configuration) + $restoreOptions)
+            $appExe = Join-Path $PSScriptRoot "src/ManiaReplayMaster.App/bin/$Configuration/net8.0-windows/ManiaReplayMaster.exe"
+            & (Join-Path $PSScriptRoot 'tools/appcheck/app-smoke.ps1') -Exe $appExe @forwarded
+            if ($LASTEXITCODE -ne 0) { throw "GUI check failed (exit code $LASTEXITCODE)." }
         }
     }
-    'appcheck' {
-        # Drives the real WPF window with UI Automation: paths -> Judge only -> golden numbers ->
-        # screenshot. `appcheck -Render` is the same flow through the full render+encode path.
-        $appCheck = Join-Path $repo 'tools\appcheck\app-smoke.ps1'
-        if (-not (Test-Path $appCheck)) { throw "App smoke test not found at $appCheck" }
-        & $appCheck @Rest
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    }
-    'restore' {
-        Invoke-Dotnet @('restore', $sln, '--source', $packages)
-    }
-    default {
-        Get-Help $PSCommandPath -Detailed | Out-String | Write-Host
-        Write-Host 'Commands: build | test | cli <args> | app | appcheck [-Render] | e2e | gamecheck | restore'
-    }
+} finally {
+    Pop-Location
 }

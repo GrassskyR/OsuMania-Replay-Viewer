@@ -7,7 +7,7 @@ namespace ManiaReplayMaster.Game;
 /// resolution feature rests on (plan §3.3 level 1).
 ///
 /// The format is versioned and officially undocumented; the layout implemented here is the one
-/// measured and validated in <c>docs/SCORESDB_FORMAT.md</c> (5,420/5,420 records consumed the file
+/// measured and validated in <c>docs/FORMATS.md</c> (5,420/5,420 records consumed the file
 /// exactly and matched the corresponding <c>.osr</c> header on all 18 fields). Because a silently
 /// wrong parse is worse than a visible failure, the reader:
 ///
@@ -223,7 +223,7 @@ public static class ScoreDatabaseReader
             var message =
                 $"scores.db byte consumption mismatch: parsed {consumed} of {bytes.Length} bytes " +
                 $"({trailing} bytes left after {parsedGroups} groups / {records} records; first trailing bytes {hex}). " +
-                "The layout assumptions in docs/SCORESDB_FORMAT.md do not hold for this file " +
+                "The layout assumptions in docs/FORMATS.md do not hold for this file " +
                 "(newer osu! build?); callers must fall back to the level-3 header scan instead of trusting this list.";
             if (options.RequireExactByteConsumption)
             {
@@ -261,7 +261,7 @@ public static class ScoreDatabaseReader
 
     /// <summary>
     /// Parses a single score record. The field order is fixed and unpadded; see
-    /// <c>docs/SCORESDB_FORMAT.md</c> §3.
+    /// <c>docs/FORMATS.md</c> §3.
     /// </summary>
     private static ScoreRecord ReadRecord(BufferReader reader, string groupMd5)
     {

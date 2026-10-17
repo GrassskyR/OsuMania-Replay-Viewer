@@ -50,7 +50,7 @@ if (-not $Beatmap) {
     $Beatmap = Join-Path $repo "fixtures\Doin - Pine nut (Night Bunny 7) [ATTang's Lv.27].osu"
 }
 if (-not $Screenshot) {
-    $Screenshot = Join-Path $repo "docs\app-smoke.png"
+    $Screenshot = Join-Path $repo "out\appcheck\app-smoke.png"
 }
 
 $failures = New-Object System.Collections.Generic.List[string]

@@ -10,7 +10,7 @@ namespace ManiaReplayMaster.Tests;
 /// produced by the reference Kotlin/Java implementation (frozen under <c>tests/golden/</c>).
 ///
 /// These are the tests that guarantee "the judgement colours do not change". Weak assertions
-/// (e.g. "it did not crash") are deliberately avoided -- per appendix C of the rewrite plan, the
+/// (e.g. "it did not crash") are deliberately avoided; the
 /// only reliable guard is a full-field comparison of both mutated note lists.
 /// </summary>
 public sealed class JudgementDifferentialTests

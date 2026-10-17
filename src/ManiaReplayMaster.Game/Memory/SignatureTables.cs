@@ -1,3 +1,5 @@
+// Modified C# implementation based on tosu/gosumemory references; see THIRD-PARTY-NOTICES.md.
+// Distributed as part of Mania Replay Viewer under GPL-3.0-only.
 namespace ManiaReplayMaster.Game.Memory;
 
 /// <summary>How a structure field's value is obtained from its address.</summary>

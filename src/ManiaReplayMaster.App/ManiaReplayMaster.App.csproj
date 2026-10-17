@@ -19,4 +19,22 @@
     <ProjectReference Include="..\ManiaReplayMaster.Game\ManiaReplayMaster.Game.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\LICENSE;..\..\NOTICE;..\..\THIRD-PARTY-NOTICES.md;..\..\README.md"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\licenses\*.txt" Link="licenses\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CopyRuntimeNotices" AfterTargets="Publish" Condition="'$(SelfContained)' == 'true'">
+    <Copy SourceFiles="%(ResolvedRuntimePack.PackageDirectory)\LICENSE.TXT"
+          DestinationFolder="$(PublishDir)licenses\runtime\%(ResolvedRuntimePack.NuGetPackageId)"
+          Condition="Exists('%(ResolvedRuntimePack.PackageDirectory)\LICENSE.TXT')" />
+    <Copy SourceFiles="%(ResolvedRuntimePack.PackageDirectory)\LICENSE"
+          DestinationFolder="$(PublishDir)licenses\runtime\%(ResolvedRuntimePack.NuGetPackageId)"
+          Condition="Exists('%(ResolvedRuntimePack.PackageDirectory)\LICENSE')" />
+    <Copy SourceFiles="%(ResolvedRuntimePack.PackageDirectory)\THIRD-PARTY-NOTICES.TXT"
+          DestinationFolder="$(PublishDir)licenses\runtime\%(ResolvedRuntimePack.NuGetPackageId)"
+          Condition="Exists('%(ResolvedRuntimePack.PackageDirectory)\THIRD-PARTY-NOTICES.TXT')" />
+  </Target>
 </Project>

@@ -1,17 +1,7 @@
-# ---------------------------------------------------------------------------------------------
-# Line-ending and binary policy.
-#
-# The build machine has core.autocrlf=true, so text is stored with LF and checked out with CRLF.
-# Binaries are declared EXPLICITLY here because git only auto-detects binary by looking for a NUL byte
-# in the first 8 KB: a small package or fixture without one would be treated as text, get its line
-# endings rewritten, and silently corrupt the committed offline NuGet feed (packages/) or a replay
-# fixture (LZMA payload where every byte matters).
-# ---------------------------------------------------------------------------------------------
-
+# Preserve binary replay fixtures and use CRLF for Windows scripts.
 * text=auto
 
 # Never touch these bytes
-*.nupkg binary
 *.png   binary
 *.osr   binary
 *.osg   binary
@@ -22,7 +12,6 @@
 
 # Windows scripts keep CRLF on checkout
 *.ps1 text eol=crlf
-*.cmd text eol=crlf
 
 # Source, docs and reference data are text
 *.cs     text
@@ -32,5 +21,4 @@
 *.props  text
 *.json   text
 *.md     text
-*.py     text
 *.osu    text
