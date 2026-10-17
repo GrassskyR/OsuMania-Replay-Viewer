@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="Language.Label" xml:space="preserve"><value>Language</value></data>
+  <data name="Language.System" xml:space="preserve"><value>System default</value></data>
+  <data name="Language.Tooltip" xml:space="preserve"><value>Chinese for Chinese system languages; English for all others. Your choice is saved.</value></data>
+  <data name="Replay.Label" xml:space="preserve"><value>Replay (.osr / .mr)</value></data>
+  <data name="Beatmap.Label" xml:space="preserve"><value>Beatmap (.osu / .osz / .mc)</value></data>
+  <data name="Browse" xml:space="preserve"><value>Browse</value></data>
+  <data name="Locate" xml:space="preserve"><value>Locate</value></data>
+  <data name="Locate.Tooltip" xml:space="preserve"><value>Find this replay's beatmap using its MD5.</value></data>
+  <data name="Swap" xml:space="preserve"><value>Swap</value></data>
+  <data name="Swap.Tooltip" xml:space="preserve"><value>Swap the replay and beatmap paths.</value></data>
+  <data name="DetectedScore.Label" xml:space="preserve"><value>Detected score</value></data>
+  <data name="AutoDetect" xml:space="preserve"><value>Auto-detect osu!</value></data>
+  <data name="AutoDetect.Tooltip" xml:space="preserve"><value>Fill in the replay and beatmap when you open an osu! score screen.</value></data>
+  <data name="AutoStart" xml:space="preserve"><value>Auto-start render</value></data>
+  <data name="AutoStart.Tooltip" xml:space="preserve"><value>Render as soon as a new score is detected. Off by default.</value></data>
+  <data name="ReadMemory" xml:space="preserve"><value>Read process memory</value></data>
+  <data name="ReadMemory.Tooltip" xml:space="preserve"><value>Read the current osu! score to identify its replay.</value></data>
+  <data name="DebugLogging" xml:space="preserve"><value>Debug logging</value></data>
+  <data name="Speed" xml:space="preserve"><value>Scroll speed</value></data>
+  <data name="Width" xml:space="preserve"><value>Width</value></data>
+  <data name="Height" xml:space="preserve"><value>Height</value></data>
+  <data name="FPS" xml:space="preserve"><value>FPS</value></data>
+  <data name="Codec" xml:space="preserve"><value>Codec</value></data>
+  <data name="Preset" xml:space="preserve"><value>Preset</value></data>
+  <data name="Output" xml:space="preserve"><value>Output folder</value></data>
+  <data name="OpenOutput" xml:space="preserve"><value>Open output folder</value></data>
+  <data name="Render" xml:space="preserve"><value>Render</value></data>
+  <data name="JudgeOnly" xml:space="preserve"><value>Judge only</value></data>
+  <data name="JudgeOnly.Tooltip" xml:space="preserve"><value>Analyze the replay and show judgement statistics without creating a video.</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Status.NoScore" xml:space="preserve"><value>No score detected yet.</value></data>
+  <data name="Status.Checking" xml:space="preserve"><value>osu!: checking…</value></data>
+  <data name="Status.Detected" xml:space="preserve"><value>osu!: detected</value></data>
+  <data name="Status.NotFound" xml:space="preserve"><value>osu!: not found</value></data>
+  <data name="Status.Unavailable" xml:space="preserve"><value>osu!: unavailable</value></data>
+  <data name="Status.AutoOff" xml:space="preserve"><value>Automatic osu! detection is off.</value></data>
+  <data name="Status.MemoryOff" xml:space="preserve"><value>Process memory reading is disabled.</value></data>
+  <data name="Status.NotRunning" xml:space="preserve"><value>osu! is not running.</value></data>
+  <data name="Status.Waiting" xml:space="preserve"><value>Open an osu! score screen to detect its replay.</value></data>
+  <data name="Status.MemoryUnavailable" xml:space="preserve"><value>Cannot read osu! memory. Check that the game is running and accessible.</value></data>
+  <data name="Status.ScoreUnavailable" xml:space="preserve"><value>Waiting for score information…</value></data>
+  <data name="Log.Ready" xml:space="preserve"><value>Ready. Drop a replay here, or let osu! detection fill it in.</value></data>
+  <data name="Log.AutoStart" xml:space="preserve"><value>Auto-start render is enabled — starting.</value></data>
+  <data name="Log.AutoDetectError" xml:space="preserve"><value>Auto-detect error: {0}</value></data>
+  <data name="Dialog.ReplayFilter" xml:space="preserve"><value>Replay files (*.osr;*.mr)|*.osr;*.mr|osu! replays (*.osr)|*.osr|Malody replays (*.mr)|*.mr|All files (*.*)|*.*</value></data>
+  <data name="Dialog.BeatmapFilter" xml:space="preserve"><value>Beatmap files (*.osu;*.osz;*.mc;*.mcz;*.zip)|*.osu;*.osz;*.mc;*.mcz;*.zip|All files (*.*)|*.*</value></data>
+  <data name="Dialog.ChooseReplay" xml:space="preserve"><value>Choose a replay</value></data>
+  <data name="Dialog.ChooseBeatmap" xml:space="preserve"><value>Choose a beatmap</value></data>
+  <data name="Log.InvalidDrop" xml:space="preserve"><value>Dropped files are neither replays nor beatmaps.</value></data>
+  <data name="Log.Dropped" xml:space="preserve"><value>Dropped: replay={0}, beatmap={1}</value></data>
+  <data name="Log.CandidateFailed" xml:space="preserve"><value>Candidate lookup failed: {0}</value></data>
+  <data name="Log.CandidateSelected" xml:space="preserve"><value>Switched to candidate: {0}</value></data>
+  <data name="Log.OpenOutputFailed" xml:space="preserve"><value>Could not open output folder: {0}</value></data>
+  <data name="Log.Cancelling" xml:space="preserve"><value>Cancelling…</value></data>
+  <data name="Log.PickInputs" xml:space="preserve"><value>Pick both a replay and a beatmap first.</value></data>
+  <data name="Log.Judging" xml:space="preserve"><value>Judging {0}…</value></data>
+  <data name="Log.Rendering" xml:space="preserve"><value>Rendering {0}…</value></data>
+  <data name="Log.Cancelled" xml:space="preserve"><value>Cancelled.</value></data>
+  <data name="Log.Failed" xml:space="preserve"><value>Failed: {0}</value></data>
+  <data name="Summary.Header" xml:space="preserve"><value>{0} · {1}K · OD {2:0.#} · rate x{3:0.###}</value></data>
+  <data name="Summary.Notes" xml:space="preserve"><value>notes {0}, actions {1}, duration {2:0.0}s</value></data>
+  <data name="Summary.Accuracy" xml:space="preserve"><value>accuracy {0:0.00}%</value></data>
+  <data name="Summary.Counts" xml:space="preserve"><value>judgement counts (ordered): {0}</value></data>
+  <data name="Summary.Video" xml:space="preserve"><value>{0} · accuracy {1:0.00}% · notes {2} · {3}</value></data>
+  <data name="Progress.Idle" xml:space="preserve"><value>Idle</value></data>
+  <data name="Progress.Starting" xml:space="preserve"><value>Starting…</value></data>
+  <data name="Progress.Done" xml:space="preserve"><value>Done</value></data>
+  <data name="Progress.Stopped" xml:space="preserve"><value>Stopped</value></data>
+  <data name="Progress.Details" xml:space="preserve"><value>{0:0.0}%  ·  elapsed {1}  ·  ~{2} left</value></data>
+  <data name="Game.NotInitialized" xml:space="preserve"><value>Not initialized</value></data>
+  <data name="Game.Located" xml:space="preserve"><value>osu! located at {0}</value></data>
+  <data name="Game.NotFound" xml:space="preserve"><value>osu! installation not found — manual mode is available.</value></data>
+  <data name="Game.Unavailable" xml:space="preserve"><value>Game integration unavailable: {0}</value></data>
+  <data name="Game.ReplayLookupFailed" xml:space="preserve"><value>Replay lookup failed: {0}</value></data>
+  <data name="Game.AutoDetectFailed" xml:space="preserve"><value>Auto-detect failed: {0}</value></data>
+  <data name="Game.NoPlayer" xml:space="preserve"><value>(no player)</value></data>
+  <data name="Game.NoMods" xml:space="preserve"><value>No mods</value></data>
+  <data name="Game.Candidate" xml:space="preserve"><value>[{0}] {1} · {2:N0} · {3} · combo {4} · {5}</value></data>
+  <data name="Game.BeatmapFound" xml:space="preserve"><value>Beatmap: {0}</value></data>
+  <data name="Game.BeatmapMissing" xml:space="preserve"><value>Beatmap not found</value></data>
+  <data name="Game.ReplayFound" xml:space="preserve"><value>Replay: {0} ({1:P0})</value></data>
+  <data name="Game.ReplayMissing" xml:space="preserve"><value>No matching replay found</value></data>
+  <data name="Game.Score" xml:space="preserve"><value>{0} · score {1:N0} · combo {2}</value></data>
+  <data name="Log.Detected" xml:space="preserve"><value>Detected from osu!: {0}</value></data>
+  <data name="Log.BeatmapLookup" xml:space="preserve"><value>Beatmap lookup: {0}</value></data>
+  <data name="Crash.Message" xml:space="preserve"><value>An unexpected error occurred:
+
+{0}
+
+Details were written to:
+{1}</value></data>
+  <data name="Candidates.Tooltip" xml:space="preserve"><value>Other candidate replays for this beatmap</value></data>
+  <data name="Game.InvalidReplay" xml:space="preserve"><value>Unable to read replay metadata.</value></data>
+</root>

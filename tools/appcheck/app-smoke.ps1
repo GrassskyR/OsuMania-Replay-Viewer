@@ -135,12 +135,19 @@ try {
 
     # THE regression guard: derived state must be announced. When this was missing, both action buttons
     # stayed disabled no matter what the user typed or browsed, making the app unusable.
-    $judgeButton = Find-Name "Judge only"
-    $renderButton = Find-Name "Render"
+    $judgeButton = Find-ById "JudgeOnlyButton"
+    $renderButton = Find-ById "RenderButton"
     Check ($null -ne $judgeButton) "found the 'Judge only' button"
     Check ($null -ne $renderButton) "found the 'Render' button"
     if ($null -eq $judgeButton) { exit 1 }
-    Check $judgeButton.Current.IsEnabled "action buttons enable once both paths are set (CanRender notification)"
+    $enableDeadline = (Get-Date).AddSeconds(5)
+    while (-not $judgeButton.Current.IsEnabled -and (Get-Date) -lt $enableDeadline) {
+        Start-Sleep -Milliseconds 100
+    }
+    $actualReplay = (Find-ById "ReplayBox").GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+    $actualBeatmap = (Find-ById "BeatmapBox").GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+    Check $judgeButton.Current.IsEnabled "action buttons enable once both paths are set (CanRender notification)" `
+        "replay='$actualReplay', beatmap='$actualBeatmap'"
     if (-not $judgeButton.Current.IsEnabled) { exit 1 }
 
     $button = if ($Render) { $renderButton } else { $judgeButton }
@@ -149,7 +156,7 @@ try {
 
     $logBox = Find-ById "LogBox"
     $lines = @()
-    $expectedPattern = if ($Render) { "\.mp4" } else { "accuracy" }
+    $expectedPattern = if ($Render) { "\.mp4" } else { "accuracy|准确率" }
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 500
@@ -172,14 +179,14 @@ try {
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
         Check ($null -ne $mp4 -and $mp4.Length -gt 0) "render produced an mp4" $output
         if ($null -ne $mp4) { Write-Host "  mp4: $($mp4.FullName) ($([math]::Round($mp4.Length / 1KB)) KB)" }
-        Check (($lines -join "`n") -match "accuracy") "render log reports accuracy"
-        Check (($lines -join "`n") -notmatch "Failed") "no failure reported in the log"
+        Check (($lines -join "`n") -match "accuracy|准确率") "render log reports accuracy"
+        Check (($lines -join "`n") -notmatch "Failed|失败") "no failure reported in the log"
     } else {
         $joined = $lines -join "`n"
-        Check ($joined -match "notes $ExpectedNotes, actions $ExpectedActions") "judgement: notes/actions" "expected $ExpectedNotes/$ExpectedActions"
-        Check ($joined -match "accuracy $([regex]::Escape($ExpectedAccuracy))%") "judgement: accuracy" "expected $ExpectedAccuracy%"
-        Check ($joined -match [regex]::Escape("judgement counts (ordered): $ExpectedCounts")) "judgement: counts" "expected $ExpectedCounts"
-        Check ($joined -notmatch "Failed|error") "no failure reported in the log"
+        Check ($joined -match "notes $ExpectedNotes, actions $ExpectedActions|音符 $ExpectedNotes，操作 $ExpectedActions") "judgement: notes/actions" "expected $ExpectedNotes/$ExpectedActions"
+        Check ($joined -match "(?:accuracy|准确率) $([regex]::Escape($ExpectedAccuracy))%") "judgement: accuracy" "expected $ExpectedAccuracy%"
+        Check ($joined -match "(?:judgement counts \(ordered\): |判定数量（按等级）：)$([regex]::Escape($ExpectedCounts))") "judgement: counts" "expected $ExpectedCounts"
+        Check ($joined -notmatch "Failed|error|失败") "no failure reported in the log"
     }
 
     Check (-not (Test-Path $crashLog) -or (Get-Item $crashLog).LastWriteTimeUtc -le $crashBefore) `

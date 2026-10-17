@@ -1,6 +1,7 @@
 <Window x:Class="ManiaReplayMaster.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:ManiaReplayMaster.App.Localization"
         Title="Mania Replay Viewer" Height="820" Width="1080"
         MinHeight="640" MinWidth="880"
         AllowDrop="True"
@@ -22,9 +23,23 @@
     <!-- Header + game status -->
     <DockPanel Grid.Row="0" LastChildFill="False">
       <TextBlock DockPanel.Dock="Left" Text="Mania Replay Viewer" FontSize="20" FontWeight="Bold" />
-      <Border DockPanel.Dock="Right" Style="{StaticResource Pill}" Background="{Binding GamePillBrush}">
-        <TextBlock Text="{Binding GameStatusText}" FontSize="12" />
-      </Border>
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock Text="{loc:Text Language.Label}" Style="{StaticResource Label}" Margin="0,0,8,0" />
+        <ComboBox x:Name="LanguageBox" Width="140" Margin="0,0,12,0"
+                  SelectedValuePath="Tag" SelectedValue="{Binding Preference, Source={x:Static loc:Localizer.Current}}"
+                  ToolTip="{loc:Text Language.Tooltip}">
+          <ComboBoxItem Tag="auto" Content="{loc:Text Language.System}" />
+          <ComboBoxItem Tag="zh-Hans" Content="中文" />
+          <ComboBoxItem Tag="en" Content="English" />
+        </ComboBox>
+        <Border Background="{StaticResource ControlBackground}" BorderBrush="{StaticResource ControlBorder}"
+                BorderThickness="1" CornerRadius="3" Padding="10,5">
+          <StackPanel Orientation="Horizontal">
+            <Ellipse Width="7" Height="7" Fill="{Binding GamePillBrush}" Margin="0,0,7,0" />
+            <TextBlock x:Name="GameStatusLabel" Text="{Binding GameStatusText}" FontSize="12" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
     </DockPanel>
 
     <!-- Inputs -->
@@ -44,38 +59,40 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Replay (.osr / .mr)" Style="{StaticResource Label}" />
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Text Replay.Label}" Style="{StaticResource Label}" />
         <TextBox x:Name="ReplayBox" Grid.Row="0" Grid.Column="1" Margin="0,0,6,4"
                  Text="{Binding ReplayPath, UpdateSourceTrigger=PropertyChanged}" />
-        <Button Grid.Row="0" Grid.Column="2" Content="Browse" Click="OnBrowseReplay" />
-        <Button Grid.Row="0" Grid.Column="3" Content="Locate" Click="OnLocateFromReplay"
-                ToolTip="Resolve the beatmap for this replay by its MD5" />
+        <Button Grid.Row="0" Grid.Column="2" Content="{loc:Text Browse}" Click="OnBrowseReplay" />
+        <Button Grid.Row="0" Grid.Column="3" Content="{loc:Text Locate}" Click="OnLocateFromReplay"
+                ToolTip="{loc:Text Locate.Tooltip}" />
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Beatmap (.osu / .osz / .mc)" Style="{StaticResource Label}" />
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="{loc:Text Beatmap.Label}" Style="{StaticResource Label}" />
         <TextBox x:Name="BeatmapBox" Grid.Row="1" Grid.Column="1" Margin="0,0,6,4"
                  Text="{Binding BeatmapPath, UpdateSourceTrigger=PropertyChanged}" />
-        <Button Grid.Row="1" Grid.Column="2" Content="Browse" Click="OnBrowseBeatmap" />
-        <Button Grid.Row="1" Grid.Column="3" Content="Swap" Click="OnSwapPaths"
-                ToolTip="Swap which box holds the replay and the beatmap" />
+        <Button Grid.Row="1" Grid.Column="2" Content="{loc:Text Browse}" Click="OnBrowseBeatmap" />
+        <Button Grid.Row="1" Grid.Column="3" Content="{loc:Text Swap}" Click="OnSwapPaths"
+                ToolTip="{loc:Text Swap.Tooltip}" />
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Detected score" Style="{StaticResource Label}" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Text DetectedScore.Label}" Style="{StaticResource Label}" />
         <Border Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Background="#FF2D2D30" CornerRadius="3"
                 Padding="8,5" Margin="0,2,0,4">
           <DockPanel LastChildFill="True">
             <ComboBox x:Name="ScoreCandidateBox" DockPanel.Dock="Right" Width="260" Margin="8,0,0,0"
                       DisplayMemberPath="Display" SelectionChanged="OnCandidateSelected"
-                      ToolTip="Other candidate replays for this beatmap" />
+                      ToolTip="{loc:Text Candidates.Tooltip}" />
             <TextBlock Text="{Binding DetectedScoreText}" TextTrimming="CharacterEllipsis" />
           </DockPanel>
         </Border>
 
-        <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,4,0,0">
-          <CheckBox Content="Auto-detect from osu!" IsChecked="{Binding AutoDetectFromGame}" />
-          <CheckBox Content="Auto-start render" IsChecked="{Binding AutoStartRender}"
-                    ToolTip="Off by default to avoid surprise renders" />
-          <CheckBox Content="Read process memory" IsChecked="{Binding MemoryEnabled}" />
-          <CheckBox Content="Debug logging" IsChecked="{Binding DebugLogging}" />
-        </StackPanel>
+        <WrapPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="4" Margin="0,8,0,0">
+          <CheckBox x:Name="AutoDetectToggle" Content="{loc:Text AutoDetect}" IsChecked="{Binding AutoDetectFromGame}"
+                    ToolTip="{loc:Text AutoDetect.Tooltip}" />
+          <CheckBox Content="{loc:Text AutoStart}" IsChecked="{Binding AutoStartRender}"
+                    ToolTip="{loc:Text AutoStart.Tooltip}" />
+          <CheckBox Content="{loc:Text ReadMemory}" IsChecked="{Binding MemoryEnabled}"
+                    ToolTip="{loc:Text ReadMemory.Tooltip}" />
+          <CheckBox Content="{loc:Text DebugLogging}" IsChecked="{Binding DebugLogging}" />
+        </WrapPanel>
       </Grid>
     </Border>
 
@@ -98,29 +115,31 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Speed" Style="{StaticResource Label}" />
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Text Speed}" Style="{StaticResource Label}" />
         <Slider x:Name="SpeedSlider" Grid.Row="0" Grid.Column="1" Minimum="1" Maximum="100"
                 IsSnapToTickEnabled="True" TickFrequency="1"
                 Value="{Binding Speed}" ValueChanged="OnSpeedChanged" Margin="0,0,10,0" />
         <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Speed}" Width="30" />
 
-        <TextBlock Grid.Row="0" Grid.Column="3" Text="Width" Style="{StaticResource Label}" />
+        <TextBlock Grid.Row="0" Grid.Column="3" Text="{loc:Text Width}" Style="{StaticResource Label}" />
         <TextBox x:Name="WidthBox" Grid.Row="0" Grid.Column="4" Width="60" Text="{Binding Width}" Margin="0,0,10,0" />
 
-        <TextBlock Grid.Row="0" Grid.Column="5" Text="Height" Style="{StaticResource Label}" />
+        <TextBlock Grid.Row="0" Grid.Column="5" Text="{loc:Text Height}" Style="{StaticResource Label}" />
         <TextBox x:Name="HeightBox" Grid.Row="0" Grid.Column="6" Width="60" Text="{Binding Height}" />
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="FPS" Style="{StaticResource Label}" Margin="0,6,8,0" />
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="{loc:Text FPS}" Style="{StaticResource Label}" Margin="0,6,8,0" />
         <TextBox x:Name="FpsBox" Grid.Row="1" Grid.Column="1" Width="60" HorizontalAlignment="Left" Margin="0,6,0,0"
                  Text="{Binding FramePerSecond}" />
-        <TextBlock Grid.Row="1" Grid.Column="2" Text="Codec" Style="{StaticResource Label}" Margin="0,6,8,0" />
-        <TextBox Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Margin="0,6,10,0" Text="{Binding Codec}" />
-        <TextBlock Grid.Row="1" Grid.Column="5" Text="Preset" Style="{StaticResource Label}" Margin="0,6,8,0" />
-        <TextBox Grid.Row="1" Grid.Column="6" Width="90" Margin="0,6,0,0" Text="{Binding CodecPreset}" />
+        <TextBlock Grid.Row="1" Grid.Column="2" Text="{loc:Text Codec}" Style="{StaticResource Label}" Margin="0,6,8,0" />
+        <TextBox x:Name="CodecBox" Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Margin="0,6,10,0"
+                 Text="{Binding Codec, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBlock Grid.Row="1" Grid.Column="5" Text="{loc:Text Preset}" Style="{StaticResource Label}" Margin="0,6,8,0" />
+        <TextBox x:Name="PresetBox" Grid.Row="1" Grid.Column="6" Width="90" Margin="0,6,0,0"
+                 Text="{Binding CodecPreset, UpdateSourceTrigger=PropertyChanged}" />
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Output" Style="{StaticResource Label}" Margin="0,6,8,0" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Text Output}" Style="{StaticResource Label}" Margin="0,6,8,0" />
         <TextBox x:Name="OutputBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" Margin="0,6,10,0" Text="{Binding OutputDir}" />
-        <Button Grid.Row="2" Grid.Column="5" Grid.ColumnSpan="2" Content="Open output folder" Margin="0,6,0,0"
+        <Button Grid.Row="2" Grid.Column="5" Grid.ColumnSpan="2" Content="{loc:Text OpenOutput}" Margin="0,6,0,0"
                 Click="OnOpenOutputDir" />
       </Grid>
     </Border>
@@ -147,9 +166,10 @@
 
     <!-- Actions -->
     <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,10,0,0">
-      <Button Content="Render" Click="OnRender" IsEnabled="{Binding CanRender}" FontWeight="SemiBold" />
-      <Button Content="Judge only" Click="OnJudgeOnly" IsEnabled="{Binding CanRender}" />
-      <Button Content="Cancel" Click="OnCancel" IsEnabled="{Binding IsBusy}" />
+      <Button x:Name="RenderButton" Content="{loc:Text Render}" Click="OnRender" IsEnabled="{Binding CanRender}" FontWeight="SemiBold" />
+      <Button x:Name="JudgeOnlyButton" Content="{loc:Text JudgeOnly}" Click="OnJudgeOnly" IsEnabled="{Binding CanRender}"
+              ToolTip="{loc:Text JudgeOnly.Tooltip}" />
+      <Button x:Name="CancelButton" Content="{loc:Text Cancel}" Click="OnCancel" IsEnabled="{Binding IsBusy}" />
       <TextBlock x:Name="ResultText" VerticalAlignment="Center" Margin="12,0,0,0"
                  Text="{Binding ResultText}" />
     </StackPanel>

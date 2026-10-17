@@ -1,6 +1,7 @@
 using System.IO;
 using ManiaReplayMaster.Game;
 using ManiaReplayMaster.Game.Memory;
+using static ManiaReplayMaster.App.Localization.Localizer;
 
 namespace ManiaReplayMaster.App;
 
@@ -11,7 +12,8 @@ internal sealed class AutoDetectResult
 
     public string? BeatmapPath { get; init; }
 
-    public string StatusText { get; init; } = string.Empty;
+    public Func<string> Describe { get; init; } = () => string.Empty;
+    public string StatusText => Describe();
 
     public IReadOnlyList<CandidateItem> Candidates { get; init; } = Array.Empty<CandidateItem>();
 
@@ -22,7 +24,8 @@ internal sealed class CandidateItem
 {
     public required string ReplayPath { get; init; }
 
-    public required string Display { get; init; }
+    public required Func<string> Describe { get; init; }
+    public string Display => Describe();
 
     public override string ToString() => Display;
 }
@@ -39,7 +42,10 @@ internal sealed class GameBridge : IDisposable
 
     public bool Available => _service is not null;
 
-    public string Detail { get; private set; } = "not initialised";
+    public string Detail => _initialisationError is not null
+        ? Text("Game.Unavailable", _initialisationError)
+        : _service is null ? Text("Game.NotInitialized")
+        : OsuFound ? Text("Game.Located", OsuRoot) : Text("Game.NotFound");
 
     public bool OsuFound => _service?.Locator.Found == true;
 
@@ -63,14 +69,10 @@ internal sealed class GameBridge : IDisposable
             _service = new GameLinkService();
             _memoryWatcher = new GameStateWatcher();
             _memoryWatcher.Start();
-            Detail = _service.Locator.Found
-                ? "osu! located"
-                : "osu! not found (manual mode only)";
         }
         catch (Exception ex)
         {
             _initialisationError = ex.Message;
-            Detail = "game integration unavailable: " + ex.Message;
         }
     }
 
@@ -79,7 +81,7 @@ internal sealed class GameBridge : IDisposable
     {
         if (_service is null)
         {
-            return new AutoDetectResult { StatusText = Detail };
+            return new AutoDetectResult { Describe = () => Detail };
         }
 
         try
@@ -89,7 +91,7 @@ internal sealed class GameBridge : IDisposable
         }
         catch (Exception ex)
         {
-            return new AutoDetectResult { StatusText = "replay lookup failed: " + ex.Message };
+            return new AutoDetectResult { Describe = () => Text("Game.ReplayLookupFailed", ex.Message) };
         }
     }
 
@@ -97,18 +99,25 @@ internal sealed class GameBridge : IDisposable
     {
         if (_service is null)
         {
-            return new AutoDetectResult { StatusText = Detail };
+            return new AutoDetectResult { Describe = () => Detail };
         }
 
         try
         {
             if (!snapshot.HasBeatmapIdentity || snapshot.State is not (OsuGameState.Results or OsuGameState.ScorePanelOpen))
-                return new AutoDetectResult { StatusText = snapshot.Detail ?? $"osu!: {snapshot.State}" };
+                return new AutoDetectResult { Describe = () => Text(snapshot.Status switch
+                {
+                    MemoryReadStatus.NotRunning => "Status.NotRunning",
+                    MemoryReadStatus.AccessDenied or MemoryReadStatus.SignaturesNotFound
+                        or MemoryReadStatus.PointerChainFailed or MemoryReadStatus.Error => "Status.MemoryUnavailable",
+                    _ => snapshot.State is OsuGameState.Results or OsuGameState.ScorePanelOpen
+                        ? "Status.ScoreUnavailable" : "Status.Waiting"
+                }) };
             return Project(_service.AutoFill(snapshot));
         }
         catch (Exception ex)
         {
-            return new AutoDetectResult { StatusText = "auto-detect failed: " + ex.Message };
+            return new AutoDetectResult { Describe = () => Text("Game.AutoDetectFailed", ex.Message) };
         }
     }
 
@@ -131,11 +140,11 @@ internal sealed class GameBridge : IDisposable
             .Select((c, i) => new CandidateItem
             {
                 ReplayPath = c.ReplayPath,
-                Display = c.Header is null
+                Describe = () => c.Header is null
                     ? $"[{i + 1}] {Path.GetFileName(c.ReplayPath)}  ({c.Source}, {c.Confidence:P0})"
-                    : $"[{i + 1}] {c.Header.Username ?? "(no player)"} · {c.Header.Score:N0} · " +
-                      $"{(c.Header.Mods == 0 ? "no mods" : "0x" + c.Header.Mods.ToString("X"))} · " +
-                      $"combo {c.Header.MaxCombo} · {c.Header.Mode}"
+                    : Text("Game.Candidate", i + 1, c.Header.Username ?? Text("Game.NoPlayer"), c.Header.Score,
+                        c.Header.Mods == 0 ? Text("Game.NoMods") : "0x" + c.Header.Mods.ToString("X"),
+                        c.Header.MaxCombo, c.Header.Mode)
             })
             .ToList();
 
@@ -143,9 +152,23 @@ internal sealed class GameBridge : IDisposable
         {
             ReplayPath = result.Replay.IsConfident ? result.Replay.Best?.ReplayPath : null,
             BeatmapPath = result.Beatmap?.Path,
-            StatusText = result.StatusText,
+            Describe = () => DescribeResult(result),
             Candidates = candidates
         };
+    }
+
+    private static string DescribeResult(AutoFillResult result)
+    {
+        if (string.IsNullOrEmpty(result.BeatmapMd5)) return Text("Game.InvalidReplay");
+        var parts = new List<string>
+        {
+            result.Beatmap is null ? Text("Game.BeatmapMissing") : Text("Game.BeatmapFound", result.Beatmap.FileName),
+            result.Replay.Best is not { } best ? Text("Game.ReplayMissing")
+                : Text("Game.ReplayFound", Path.GetFileName(best.ReplayPath), best.Confidence)
+        };
+        if (result.Replay.Best?.Header is { } header)
+            parts.Add(Text("Game.Score", header.Username ?? Text("Game.NoPlayer"), header.Score, header.MaxCombo));
+        return string.Join("  ·  ", parts);
     }
 
     public void Dispose()

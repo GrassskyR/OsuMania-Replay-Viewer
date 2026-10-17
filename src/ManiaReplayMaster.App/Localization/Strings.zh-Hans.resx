@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="Language.Label" xml:space="preserve"><value>界面语言</value></data>
+  <data name="Language.System" xml:space="preserve"><value>跟随系统</value></data>
+  <data name="Language.Tooltip" xml:space="preserve"><value>中文系统使用中文，其余系统使用英文。手动选择会自动保存。</value></data>
+  <data name="Replay.Label" xml:space="preserve"><value>回放 (.osr / .mr)</value></data>
+  <data name="Beatmap.Label" xml:space="preserve"><value>谱面 (.osu / .osz / .mc)</value></data>
+  <data name="Browse" xml:space="preserve"><value>浏览</value></data>
+  <data name="Locate" xml:space="preserve"><value>定位谱面</value></data>
+  <data name="Locate.Tooltip" xml:space="preserve"><value>根据回放中的 MD5 查找对应谱面。</value></data>
+  <data name="Swap" xml:space="preserve"><value>交换</value></data>
+  <data name="Swap.Tooltip" xml:space="preserve"><value>交换回放与谱面路径。</value></data>
+  <data name="DetectedScore.Label" xml:space="preserve"><value>检测到的成绩</value></data>
+  <data name="AutoDetect" xml:space="preserve"><value>自动检测 osu!</value></data>
+  <data name="AutoDetect.Tooltip" xml:space="preserve"><value>打开 osu! 成绩界面时，自动填入回放和谱面。</value></data>
+  <data name="AutoStart" xml:space="preserve"><value>自动开始渲染</value></data>
+  <data name="AutoStart.Tooltip" xml:space="preserve"><value>检测到新成绩后立即渲染，默认关闭。</value></data>
+  <data name="ReadMemory" xml:space="preserve"><value>读取游戏内存</value></data>
+  <data name="ReadMemory.Tooltip" xml:space="preserve"><value>读取 osu! 当前成绩，定位对应回放。</value></data>
+  <data name="DebugLogging" xml:space="preserve"><value>调试日志</value></data>
+  <data name="Speed" xml:space="preserve"><value>滚动速度</value></data>
+  <data name="Width" xml:space="preserve"><value>宽度</value></data>
+  <data name="Height" xml:space="preserve"><value>高度</value></data>
+  <data name="FPS" xml:space="preserve"><value>帧率</value></data>
+  <data name="Codec" xml:space="preserve"><value>编码器</value></data>
+  <data name="Preset" xml:space="preserve"><value>编码预设</value></data>
+  <data name="Output" xml:space="preserve"><value>输出目录</value></data>
+  <data name="OpenOutput" xml:space="preserve"><value>打开输出目录</value></data>
+  <data name="Render" xml:space="preserve"><value>渲染视频</value></data>
+  <data name="JudgeOnly" xml:space="preserve"><value>仅计算判定</value></data>
+  <data name="JudgeOnly.Tooltip" xml:space="preserve"><value>分析回放并显示判定统计，不生成视频。</value></data>
+  <data name="Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Status.NoScore" xml:space="preserve"><value>尚未检测到成绩。</value></data>
+  <data name="Status.Checking" xml:space="preserve"><value>osu!：检测中…</value></data>
+  <data name="Status.Detected" xml:space="preserve"><value>osu!：已检测到</value></data>
+  <data name="Status.NotFound" xml:space="preserve"><value>osu!：未找到</value></data>
+  <data name="Status.Unavailable" xml:space="preserve"><value>osu!：不可用</value></data>
+  <data name="Status.AutoOff" xml:space="preserve"><value>已关闭 osu! 自动检测。</value></data>
+  <data name="Status.MemoryOff" xml:space="preserve"><value>已关闭游戏内存读取。</value></data>
+  <data name="Status.NotRunning" xml:space="preserve"><value>osu! 未运行。</value></data>
+  <data name="Status.Waiting" xml:space="preserve"><value>请打开 osu! 成绩界面以检测回放。</value></data>
+  <data name="Status.MemoryUnavailable" xml:space="preserve"><value>无法读取 osu! 内存，请确认游戏正在运行且可访问。</value></data>
+  <data name="Status.ScoreUnavailable" xml:space="preserve"><value>正在等待成绩信息…</value></data>
+  <data name="Log.Ready" xml:space="preserve"><value>准备就绪。拖入回放，或打开 osu! 成绩界面自动填入。</value></data>
+  <data name="Log.AutoStart" xml:space="preserve"><value>已启用自动渲染，正在开始。</value></data>
+  <data name="Log.AutoDetectError" xml:space="preserve"><value>自动检测出错：{0}</value></data>
+  <data name="Dialog.ReplayFilter" xml:space="preserve"><value>回放文件 (*.osr;*.mr)|*.osr;*.mr|osu! 回放 (*.osr)|*.osr|Malody 回放 (*.mr)|*.mr|所有文件 (*.*)|*.*</value></data>
+  <data name="Dialog.BeatmapFilter" xml:space="preserve"><value>谱面文件 (*.osu;*.osz;*.mc;*.mcz;*.zip)|*.osu;*.osz;*.mc;*.mcz;*.zip|所有文件 (*.*)|*.*</value></data>
+  <data name="Dialog.ChooseReplay" xml:space="preserve"><value>选择回放</value></data>
+  <data name="Dialog.ChooseBeatmap" xml:space="preserve"><value>选择谱面</value></data>
+  <data name="Log.InvalidDrop" xml:space="preserve"><value>拖入的文件不是受支持的回放或谱面。</value></data>
+  <data name="Log.Dropped" xml:space="preserve"><value>已拖入：回放={0}，谱面={1}</value></data>
+  <data name="Log.CandidateFailed" xml:space="preserve"><value>查找候选回放失败：{0}</value></data>
+  <data name="Log.CandidateSelected" xml:space="preserve"><value>已切换候选回放：{0}</value></data>
+  <data name="Log.OpenOutputFailed" xml:space="preserve"><value>无法打开输出目录：{0}</value></data>
+  <data name="Log.Cancelling" xml:space="preserve"><value>正在取消…</value></data>
+  <data name="Log.PickInputs" xml:space="preserve"><value>请先选择回放和谱面。</value></data>
+  <data name="Log.Judging" xml:space="preserve"><value>正在计算判定：{0}…</value></data>
+  <data name="Log.Rendering" xml:space="preserve"><value>正在渲染：{0}…</value></data>
+  <data name="Log.Cancelled" xml:space="preserve"><value>已取消。</value></data>
+  <data name="Log.Failed" xml:space="preserve"><value>失败：{0}</value></data>
+  <data name="Summary.Header" xml:space="preserve"><value>{0} · {1}K · OD {2:0.#} · 倍速 x{3:0.###}</value></data>
+  <data name="Summary.Notes" xml:space="preserve"><value>音符 {0}，操作 {1}，时长 {2:0.0} 秒</value></data>
+  <data name="Summary.Accuracy" xml:space="preserve"><value>准确率 {0:0.00}%</value></data>
+  <data name="Summary.Counts" xml:space="preserve"><value>判定数量（按等级）：{0}</value></data>
+  <data name="Summary.Video" xml:space="preserve"><value>{0} · 准确率 {1:0.00}% · 音符 {2} · {3}</value></data>
+  <data name="Progress.Idle" xml:space="preserve"><value>空闲</value></data>
+  <data name="Progress.Starting" xml:space="preserve"><value>正在开始…</value></data>
+  <data name="Progress.Done" xml:space="preserve"><value>已完成</value></data>
+  <data name="Progress.Stopped" xml:space="preserve"><value>已停止</value></data>
+  <data name="Progress.Details" xml:space="preserve"><value>{0:0.0}%  ·  已用时 {1}  ·  预计剩余 {2}</value></data>
+  <data name="Game.NotInitialized" xml:space="preserve"><value>尚未初始化</value></data>
+  <data name="Game.Located" xml:space="preserve"><value>已找到 osu!：{0}</value></data>
+  <data name="Game.NotFound" xml:space="preserve"><value>未找到 osu! 安装目录，可手动选择文件。</value></data>
+  <data name="Game.Unavailable" xml:space="preserve"><value>游戏连接不可用：{0}</value></data>
+  <data name="Game.ReplayLookupFailed" xml:space="preserve"><value>回放查找失败：{0}</value></data>
+  <data name="Game.AutoDetectFailed" xml:space="preserve"><value>自动检测失败：{0}</value></data>
+  <data name="Game.NoPlayer" xml:space="preserve"><value>（无玩家名称）</value></data>
+  <data name="Game.NoMods" xml:space="preserve"><value>无 Mod</value></data>
+  <data name="Game.Candidate" xml:space="preserve"><value>[{0}] {1} · {2:N0} · {3} · 连击 {4} · {5}</value></data>
+  <data name="Game.BeatmapFound" xml:space="preserve"><value>谱面：{0}</value></data>
+  <data name="Game.BeatmapMissing" xml:space="preserve"><value>未找到谱面</value></data>
+  <data name="Game.ReplayFound" xml:space="preserve"><value>回放：{0}（{1:P0}）</value></data>
+  <data name="Game.ReplayMissing" xml:space="preserve"><value>未找到匹配的回放</value></data>
+  <data name="Game.Score" xml:space="preserve"><value>{0} · 分数 {1:N0} · 连击 {2}</value></data>
+  <data name="Log.Detected" xml:space="preserve"><value>已从 osu! 检测到：{0}</value></data>
+  <data name="Log.BeatmapLookup" xml:space="preserve"><value>谱面查找：{0}</value></data>
+  <data name="Crash.Message" xml:space="preserve"><value>发生意外错误：
+
+{0}
+
+详细信息已写入：
+{1}</value></data>
+  <data name="Candidates.Tooltip" xml:space="preserve"><value>此谱面的其他候选回放</value></data>
+  <data name="Game.InvalidReplay" xml:space="preserve"><value>无法读取回放信息。</value></data>
+</root>

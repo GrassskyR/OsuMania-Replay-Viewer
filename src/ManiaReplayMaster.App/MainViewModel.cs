@@ -3,6 +3,8 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
+using ManiaReplayMaster.App.Localization;
+using static ManiaReplayMaster.App.Localization.Localizer;
 
 namespace ManiaReplayMaster.App;
 
@@ -18,6 +20,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
     public MainViewModel()
     {
         var config = Core.Model.Config.Instance;
+        UiSettings.Current.ApplyRendering(config);
         _speed = config.Speed;
         _width = config.Width;
         _height = config.Height;
@@ -28,6 +31,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         _debugLogging = config.Debug;
 
         LogLines = new ObservableCollection<string>();
+        Localizer.Current.PropertyChanged += OnLanguageChanged;
     }
 
     public ObservableCollection<string> LogLines { get; }
@@ -69,7 +73,11 @@ internal sealed class MainViewModel : INotifyPropertyChanged
     public bool AutoDetectFromGame
     {
         get => _autoDetectFromGame;
-        set => Set(ref _autoDetectFromGame, value);
+        set
+        {
+            if (Set(ref _autoDetectFromGame, value) && !value)
+                SetDetectedScore(() => Text("Status.AutoOff"));
+        }
     }
 
     private bool _autoStartRender;
@@ -85,23 +93,26 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         get => _memoryEnabled;
         set
         {
-            if (Set(ref _memoryEnabled, value)) _game.SetMemoryEnabled(value);
+            if (Set(ref _memoryEnabled, value))
+            {
+                _game.SetMemoryEnabled(value);
+                if (!value) SetDetectedScore(() => Text("Status.MemoryOff"));
+            }
         }
     }
 
-    private string _detectedScoreText = "No score detected yet.";
-    public string DetectedScoreText
+    private Func<string> _detectedScoreText = () => Text("Status.NoScore");
+    public string DetectedScoreText => _detectedScoreText();
+    private void SetDetectedScore(Func<string> describe)
     {
-        get => _detectedScoreText;
-        set => Set(ref _detectedScoreText, value);
+        var previous = DetectedScoreText;
+        _detectedScoreText = describe;
+        if (previous != DetectedScoreText) OnPropertyChanged(nameof(DetectedScoreText));
     }
 
-    private string _gameStatusText = "osu!: checking…";
-    public string GameStatusText
-    {
-        get => _gameStatusText;
-        set => Set(ref _gameStatusText, value);
-    }
+    private bool _gameInitialised;
+    public string GameStatusText => Text(!_gameInitialised ? "Status.Checking"
+        : !_game.Available ? "Status.Unavailable" : _game.OsuFound ? "Status.Detected" : "Status.NotFound");
 
     private Brush _gamePillBrush = (Brush)System.Windows.Application.Current.Resources["PillOff"];
     public Brush GamePillBrush
@@ -124,6 +135,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
             }
 
             Core.Model.Config.Instance.Speed = value;
+            UiSettings.Current.RememberRendering(Core.Model.Config.Instance);
             OnPropertyChanged(nameof(SpeedText));
         }
     }
@@ -178,6 +190,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
             if (Set(ref _codec, value))
             {
                 Core.Model.Config.Instance.Codec = value;
+                UiSettings.Current.RememberRendering(Core.Model.Config.Instance);
             }
         }
     }
@@ -191,6 +204,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
             if (Set(ref _codecPreset, value))
             {
                 Core.Model.Config.Instance.CodecPreset = value;
+                UiSettings.Current.RememberRendering(Core.Model.Config.Instance);
             }
         }
     }
@@ -230,11 +244,12 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         set => Set(ref _progress, value);
     }
 
-    private string _progressText = "idle";
-    public string ProgressText
+    private Func<string> _progressText = () => Text("Progress.Idle");
+    public string ProgressText => _progressText();
+    public void SetProgressText(Func<string> describe)
     {
-        get => _progressText;
-        set => Set(ref _progressText, value);
+        _progressText = describe;
+        OnPropertyChanged(nameof(ProgressText));
     }
 
     private bool _isBusy;
@@ -250,11 +265,12 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private string _resultText = string.Empty;
-    public string ResultText
+    private Func<string> _resultText = () => string.Empty;
+    public string ResultText => _resultText();
+    public void SetResultText(Func<string> describe)
     {
-        get => _resultText;
-        set => Set(ref _resultText, value);
+        _resultText = describe;
+        OnPropertyChanged(nameof(ResultText));
     }
 
     public bool CanRender => !IsBusy
@@ -282,23 +298,22 @@ internal sealed class MainViewModel : INotifyPropertyChanged
     public void InitialiseGameLink()
     {
         _game.Initialise();
+        _gameInitialised = true;
+        OnPropertyChanged(nameof(GameStatusText));
         if (_game.Available && _game.OsuFound)
         {
-            GameStatusText = "osu!: detected ●";
             GamePillBrush = (Brush)System.Windows.Application.Current.Resources["PillOk"];
-            Log($"osu! located at {_game.OsuRoot}");
+            Log(Text("Game.Located", _game.OsuRoot));
         }
         else if (_game.Available)
         {
-            GameStatusText = "osu!: not found";
             GamePillBrush = (Brush)System.Windows.Application.Current.Resources["PillWarn"];
-            Log("osu! installation not found — manual mode is fully available.");
+            Log(Text("Game.NotFound"));
         }
         else
         {
-            GameStatusText = "osu!: unavailable";
             GamePillBrush = (Brush)System.Windows.Application.Current.Resources["PillOff"];
-            Log("Game integration unavailable: " + _game.Detail);
+            Log(_game.Detail);
         }
     }
 
@@ -315,7 +330,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
 
         if (!MemoryEnabled)
         {
-            DetectedScoreText = "Process memory reading is disabled.";
+            SetDetectedScore(() => Text("Status.MemoryOff"));
             return false;
         }
 
@@ -324,7 +339,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         {
             if (!string.IsNullOrWhiteSpace(result.StatusText))
             {
-                DetectedScoreText = result.StatusText;
+                SetDetectedScore(result.Describe);
             }
 
             return false;
@@ -343,11 +358,11 @@ internal sealed class MainViewModel : INotifyPropertyChanged
             changed = true;
         }
 
-        DetectedScoreText = result.StatusText;
+        SetDetectedScore(result.Describe);
 
         if (changed)
         {
-            Log("Detected from osu!: " + result.StatusText);
+            Log(Text("Log.Detected", result.StatusText));
         }
 
         return changed;
@@ -363,8 +378,8 @@ internal sealed class MainViewModel : INotifyPropertyChanged
             BeatmapPath = result.BeatmapPath;
         }
 
-        DetectedScoreText = result.StatusText;
-        Log("Beatmap lookup: " + result.StatusText);
+        SetDetectedScore(result.Describe);
+        Log(Text("Log.BeatmapLookup", result.StatusText));
         return result;
     }
 
@@ -378,7 +393,20 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         => !string.IsNullOrWhiteSpace(a) && !string.IsNullOrWhiteSpace(b)
            && string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
 
-    public void Dispose() => _game.Dispose();
+    private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != System.Windows.Data.Binding.IndexerName) return;
+        OnPropertyChanged(nameof(DetectedScoreText));
+        OnPropertyChanged(nameof(GameStatusText));
+        OnPropertyChanged(nameof(ProgressText));
+        OnPropertyChanged(nameof(ResultText));
+    }
+
+    public void Dispose()
+    {
+        Localizer.Current.PropertyChanged -= OnLanguageChanged;
+        _game.Dispose();
+    }
 
     // ---------------------------------------------------------------- INotifyPropertyChanged
 

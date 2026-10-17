@@ -82,6 +82,12 @@ curl.exe -sSL --ssl-no-revoke -o "packages\my.package.1.0.0.nupkg" `
 4. Adjust speed / resolution / FPS / codec, then press **Render**. **Judge only** runs the judgement and prints the counts without encoding.
 5. Cancel is supported — it aborts rendering between windows and kills the running ffmpeg.
 
+The top-right language menu offers **System default / 中文 / English** and switches immediately.
+System default uses Simplified Chinese for any Chinese system UI language and English otherwise.
+Your selection is saved in `%LOCALAPPDATA%\ManiaReplayViewer\ui-settings.json`.
+Scroll speed, codec, and encoder preset are also remembered as you edit them and restored on the
+next launch. Changing the interface language preserves these render preferences.
+
 Videos are saved in the configured output directory as
 `Player - Artist - Title [Difficulty] (yyyy-MM-dd) OsuMania.mp4` (with the replay's mode and local play date).
 This also gives hash-named `Data\r` replays readable names. Invalid Windows filename characters are

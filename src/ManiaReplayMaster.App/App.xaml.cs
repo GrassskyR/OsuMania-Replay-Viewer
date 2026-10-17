@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using ManiaReplayMaster.App.Localization;
 
 namespace ManiaReplayMaster.App;
 
@@ -24,8 +25,7 @@ public partial class App : Application
     {
         CrashLog.Write(e.Exception);
         MessageBox.Show(
-            "An unexpected error occurred:\n\n" + e.Exception.Message +
-            "\n\nDetails were written to:\n" + CrashLog.LastPath,
+            Localizer.Text("Crash.Message", e.Exception.Message, CrashLog.LastPath),
             "Mania Replay Viewer",
             MessageBoxButton.OK,
             MessageBoxImage.Error);

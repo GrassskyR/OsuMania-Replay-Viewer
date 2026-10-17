@@ -6,6 +6,8 @@ using System.Windows.Threading;
 using ManiaReplayMaster.Core;
 using ManiaReplayMaster.Core.Model;
 using ManiaReplayMaster.Encode;
+using ManiaReplayMaster.App.Localization;
+using static ManiaReplayMaster.App.Localization.Localizer;
 using PipelineRunner = ManiaReplayMaster.Core.Pipeline.Pipeline;
 
 namespace ManiaReplayMaster.App;
@@ -21,9 +23,10 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _vm;
+        Localizer.Current.PropertyChanged += OnLanguageChanged;
 
         _vm.InitialiseGameLink();
-        _vm.Log("Ready. Drop a .osr onto the window, or let auto-detect fill it in.");
+        _vm.Log(Text("Log.Ready"));
 
         // ~500 ms is slow enough to be free and fast enough to feel instant when a score panel
         // opens; the plan's §5.2 range is 100-200 ms for the memory poll, which happens inside
@@ -45,14 +48,14 @@ public partial class MainWindow : Window
                 RefreshCandidateList();
                 if (_vm.AutoStartRender && _vm.CanRender)
                 {
-                    _vm.Log("Auto-start render is enabled — starting.");
+                    _vm.Log(Text("Log.AutoStart"));
                     StartRender(judgeOnly: false);
                 }
             }
         }
         catch (Exception ex)
         {
-            _vm.Log("auto-detect error: " + ex.Message);
+            _vm.Log(Text("Log.AutoDetectError", ex.Message));
         }
     }
 
@@ -61,8 +64,7 @@ public partial class MainWindow : Window
     private void OnBrowseReplay(object sender, RoutedEventArgs e)
     {
         var path = PickOpenFile(
-            "Replay files (*.osr;*.mr)|*.osr;*.mr|osu! replays (*.osr)|*.osr|Malody replays (*.mr)|*.mr|All files (*.*)|*.*",
-            "Choose a replay");
+            Text("Dialog.ReplayFilter"), Text("Dialog.ChooseReplay"));
         if (path is null)
         {
             return;
@@ -76,8 +78,7 @@ public partial class MainWindow : Window
     private void OnBrowseBeatmap(object sender, RoutedEventArgs e)
     {
         var path = PickOpenFile(
-            "Beatmap files (*.osu;*.osz;*.mc;*.mcz;*.zip)|*.osu;*.osz;*.mc;*.mcz;*.zip|All files (*.*)|*.*",
-            "Choose a beatmap");
+            Text("Dialog.BeatmapFilter"), Text("Dialog.ChooseBeatmap"));
         if (path is not null)
         {
             _vm.BeatmapPath = path;
@@ -123,12 +124,12 @@ public partial class MainWindow : Window
 
         if (replay is null && beatmap is null)
         {
-            _vm.Log("Dropped files are neither replays nor beatmaps.");
+            _vm.Log(Text("Log.InvalidDrop"));
             return;
         }
 
-        _vm.Log($"Dropped: replay={(replay is null ? "-" : Path.GetFileName(replay))}, " +
-                $"beatmap={(beatmap is null ? "-" : Path.GetFileName(beatmap))}");
+        _vm.Log(Text("Log.Dropped", replay is null ? "-" : Path.GetFileName(replay),
+            beatmap is null ? "-" : Path.GetFileName(beatmap)));
 
         RefreshCandidateList();
         if (replay is not null && beatmap is null)
@@ -190,7 +191,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            _vm.Log("candidate lookup failed: " + ex.Message);
+            _vm.Log(Text("Log.CandidateFailed", ex.Message));
         }
     }
 
@@ -199,14 +200,21 @@ public partial class MainWindow : Window
         if (ScoreCandidateBox.SelectedItem is CandidateItem item)
         {
             _vm.ReplayPath = item.ReplayPath;
-            _vm.Log("Switched to candidate: " + item.Display);
+            _vm.Log(Text("Log.CandidateSelected", item.Display));
         }
     }
 
     // ---------------------------------------------------------------- parameters
 
+    private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == System.Windows.Data.Binding.IndexerName)
+            ScoreCandidateBox.Items.Refresh();
+    }
+
     private void OnSpeedChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (!IsLoaded) return;
         // The slider is the hot control; keep the label in sync immediately.
         _vm.Speed = (int)Math.Round(e.NewValue);
     }
@@ -221,7 +229,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            _vm.Log("could not open output folder: " + ex.Message);
+            _vm.Log(Text("Log.OpenOutputFailed", ex.Message));
         }
     }
 
@@ -238,7 +246,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        _vm.Log("Cancelling…");
+        _vm.Log(Text("Log.Cancelling"));
         _cts.Cancel();
     }
 
@@ -246,7 +254,7 @@ public partial class MainWindow : Window
     {
         if (!_vm.CanRender)
         {
-            _vm.Log("Pick both a replay and a beatmap first.");
+            _vm.Log(Text("Log.PickInputs"));
             return;
         }
 
@@ -260,17 +268,15 @@ public partial class MainWindow : Window
         var token = _cts.Token;
         _vm.IsBusy = true;
         _vm.Progress = 0;
-        _vm.ResultText = string.Empty;
+        _vm.SetResultText(() => string.Empty);
         _startedAt = DateTime.Now;
-        _vm.ProgressText = "starting…";
-        _vm.Log(judgeOnly
-            ? $"Judging {Path.GetFileName(replay)}…"
-            : $"Rendering {Path.GetFileName(replay)}…");
+        _vm.SetProgressText(() => Text("Progress.Starting"));
+        _vm.Log(Text(judgeOnly ? "Log.Judging" : "Log.Rendering", Path.GetFileName(replay)));
 
         var progress = new Progress<EncodeProgress>(p =>
         {
             _vm.Progress = Math.Clamp(p.Percentage, 0, 100);
-            _vm.ProgressText = Describe(p.Percentage, _startedAt);
+            _vm.SetProgressText(() => Describe(p.Percentage, _startedAt));
         });
 
         Task.Run(() =>
@@ -297,11 +303,11 @@ public partial class MainWindow : Window
             }
             catch (OperationCanceledException)
             {
-                Report("Cancelled.", null);
+                Report(() => Text("Log.Cancelled"), null);
             }
             catch (Exception ex)
             {
-                Report("Failed: " + ex.Message, ex);
+                Report(() => Text("Log.Failed", ex.Message), ex);
             }
         }, token);
     }
@@ -319,8 +325,7 @@ public partial class MainWindow : Window
                 ? baseJudger.JudgementFromJudging
                 : new List<int>();
 
-            var summary = BuildSummary(beatMap, replay, counts);
-            Report(summary, null);
+            Report(() => BuildSummary(beatMap, replay, counts), null);
         }
         finally
         {
@@ -332,15 +337,14 @@ public partial class MainWindow : Window
     {
         var lines = new List<string>
         {
-            $"{beatMap.GameMode} · {beatMap.Key}K · OD {beatMap.Od:0.#} · rate x{replay.Rate:0.###}",
-            $"notes {beatMap.Notes.Count}, actions {replay.ReplayData.Count}, " +
-            $"duration {beatMap.Duration / 1000.0:0.0}s",
-            $"accuracy {replay.Acc * 100:0.00}%"
+            Text("Summary.Header", beatMap.GameMode, beatMap.Key, beatMap.Od, replay.Rate),
+            Text("Summary.Notes", beatMap.Notes.Count, replay.ReplayData.Count, beatMap.Duration / 1000.0),
+            Text("Summary.Accuracy", replay.Acc * 100)
         };
 
         if (counts.Count > 0)
         {
-            lines.Add("judgement counts (ordered): " + string.Join(", ", counts));
+            lines.Add(Text("Summary.Counts", string.Join(", ", counts)));
         }
 
         return string.Join(Environment.NewLine, lines);
@@ -352,30 +356,31 @@ public partial class MainWindow : Window
             .GroupBy(n => n.JudgementStart)
             .OrderBy(g => g.Key)
             .Select(g => $"{g.Key}:{g.Count()}");
-        var summary = $"{Path.GetFileName(videoPath)} · accuracy {replay.Acc * 100:0.00}% · " +
-                      $"notes {beatMap.Notes.Count} · " + string.Join(" ", counts);
-        Report(summary, null);
+        var judgementCounts = string.Join(" ", counts);
+        var accuracy = replay.Acc * 100;
+        var noteCount = beatMap.Notes.Count;
+        Report(() => Text("Summary.Video", Path.GetFileName(videoPath), accuracy, noteCount, judgementCounts), null);
     }
 
-    private void Report(string message, Exception? error)
+    private void Report(Func<string> describe, Exception? error)
     {
         Dispatcher.Invoke(() =>
         {
             _vm.IsBusy = false;
             _cts?.Dispose();
             _cts = null;
-            _vm.ResultText = message.Split('\n')[0];
+            _vm.SetResultText(() => describe().Split('\n')[0]);
             if (error is null)
             {
                 _vm.Progress = 100;
-                _vm.ProgressText = "done";
+                _vm.SetProgressText(() => Text("Progress.Done"));
             }
             else
             {
-                _vm.ProgressText = "stopped";
+                _vm.SetProgressText(() => Text("Progress.Stopped"));
             }
 
-            _vm.Log(message);
+            _vm.Log(describe());
             if (error is not null)
             {
                 _vm.Log(error.ToString());
@@ -388,12 +393,12 @@ public partial class MainWindow : Window
         var elapsed = DateTime.Now - startedAt;
         if (percent <= 0.5 || elapsed.TotalSeconds < 1)
         {
-            return "starting…";
+            return Text("Progress.Starting");
         }
 
         var total = elapsed.TotalSeconds / (percent / 100.0);
         var remaining = TimeSpan.FromSeconds(Math.Max(0, total - elapsed.TotalSeconds));
-        return $"{percent:0.0}%  ·  elapsed {Format(elapsed)}  ·  ~{Format(remaining)} left";
+        return Text("Progress.Details", percent, Format(elapsed), Format(remaining));
     }
 
     private static string Format(TimeSpan span)
@@ -406,6 +411,7 @@ public partial class MainWindow : Window
         try
         {
             _detectTimer.Stop();
+            Localizer.Current.PropertyChanged -= OnLanguageChanged;
             _cts?.Cancel();
             _vm.Dispose();
         }
