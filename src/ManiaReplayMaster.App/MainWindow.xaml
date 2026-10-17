@@ -5,6 +5,7 @@
         MinHeight="640" MinWidth="880"
         AllowDrop="True"
         Background="#FF1E1E1E"
+        Foreground="{StaticResource TextPrimary}"
         Drop="OnDrop" DragOver="OnDragOver"
         Closing="OnClosing">
 
