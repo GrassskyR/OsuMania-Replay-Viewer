@@ -227,10 +227,14 @@ public static class Program
 
         var process = System.Diagnostics.Process.GetCurrentProcess();
         var module = process.MainModule;
+        var stableResults = StableLayoutFixture.Create(results: true);
+        var stablePlaying = StableLayoutFixture.Create(results: false);
 
         var handshake = string.Join(
             "|",
             "MRM-X86-TARGET-1",
+            $"stableResults=0x{(uint)stableResults.ToInt32():X}",
+            $"stablePlaying=0x{(uint)stablePlaying.ToInt32():X}",
             $"pid={Environment.ProcessId}",
             $"ptr={IntPtr.Size}",
             $"moduleBase=0x{(module is null ? 0UL : (ulong)module.BaseAddress.ToInt64()):X}",
@@ -309,6 +313,8 @@ public static class Program
         Marshal.FreeHGlobal(selectedScore);
         Marshal.FreeHGlobal(modsScratch);
         Marshal.FreeHGlobal(boundaryBlock);
+        Marshal.FreeHGlobal(stableResults);
+        Marshal.FreeHGlobal(stablePlaying);
         return 0;
     }
 

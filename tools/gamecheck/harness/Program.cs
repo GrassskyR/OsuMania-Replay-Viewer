@@ -25,6 +25,7 @@ namespace ManiaReplayMaster.GameCheck;
 /// gamecheck songsscan    [--sample 5]
 /// gamecheck memory32     [--helper &lt;path&gt;]
 /// gamecheck staticsig    [--exe &lt;osu!.exe&gt;] [--report &lt;path.md&gt;]
+/// gamecheck live         [--poll &lt;n&gt;]   (requires the game to be running)
 /// gamecheck all
 /// </code>
 /// </summary>
@@ -74,6 +75,9 @@ public static class Program
                     break;
                 case "staticsig":
                     StaticSig(runner, rest);
+                    break;
+                case "live":
+                    Live(runner, rest);
                     break;
                 case "all":
                     Locate(runner, rest);
@@ -135,6 +139,7 @@ public static class Program
               songsscan                  Songs\*\*.osu MD5 scan + cache reuse
               memory32                   synthetic 32-bit target process checks
               staticsig                  signature table vs. on-disk osu!.exe (no game needed)
+              live                       real-machine calibration against a RUNNING osu! [--poll N]
               all                        everything above
 
             Options: --sample N  --hash-sample N  --root <osu root>  --helper <path>
@@ -1019,6 +1024,13 @@ public static class Program
     private static void StaticSig(CheckRunner runner, string[] args)
     {
         StaticSignatureChecks.Run(runner, args);
+    }
+
+    // ------------------------------------------------------------------ live game
+
+    private static void Live(CheckRunner runner, string[] args)
+    {
+        LiveMemoryChecks.Run(runner, args);
     }
 
     // ------------------------------------------------------------------ helpers

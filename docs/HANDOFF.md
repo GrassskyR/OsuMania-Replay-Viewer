@@ -1,5 +1,8 @@
 # Handoff — Mania Replay Viewer (Windows-native rewrite)
 
+**2026-10-17 update:** The live memory chains and WPF auto-fill are now calibrated and verified.
+See [LIVE_MEMORY_FIX.md](LIVE_MEMORY_FIX.md); the older unverified-memory notes below are historical.
+
 **Written for:** the next agent picking this up.
 **Date context:** supersedes the previous handoff; its "22 synthetic checks failing" section was
 already stale when it was written (the previous owner fixed most of it a few minutes later, and this

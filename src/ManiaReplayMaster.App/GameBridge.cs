@@ -1,5 +1,6 @@
 using System.IO;
 using ManiaReplayMaster.Game;
+using ManiaReplayMaster.Game.Memory;
 
 namespace ManiaReplayMaster.App;
 
@@ -33,6 +34,7 @@ internal sealed class CandidateItem
 internal sealed class GameBridge : IDisposable
 {
     private GameLinkService? _service;
+    private GameStateWatcher? _memoryWatcher;
     private string? _initialisationError;
 
     public bool Available => _service is not null;
@@ -42,6 +44,12 @@ internal sealed class GameBridge : IDisposable
     public bool OsuFound => _service?.Locator.Found == true;
 
     public string? OsuRoot => _service?.Locator.Found == true ? _service.Locator.Root : null;
+
+    public void SetMemoryEnabled(bool enabled)
+    {
+        if (enabled) _memoryWatcher?.Start();
+        else _memoryWatcher?.Stop();
+    }
 
     public void Initialise()
     {
@@ -53,6 +61,8 @@ internal sealed class GameBridge : IDisposable
         try
         {
             _service = new GameLinkService();
+            _memoryWatcher = new GameStateWatcher();
+            _memoryWatcher.Start();
             Detail = _service.Locator.Found
                 ? "osu! located"
                 : "osu! not found (manual mode only)";
@@ -92,6 +102,8 @@ internal sealed class GameBridge : IDisposable
 
         try
         {
+            if (!snapshot.HasBeatmapIdentity || snapshot.State is not (OsuGameState.Results or OsuGameState.ScorePanelOpen))
+                return new AutoDetectResult { StatusText = snapshot.Detail ?? $"osu!: {snapshot.State}" };
             return Project(_service.AutoFill(snapshot));
         }
         catch (Exception ex)
@@ -101,13 +113,7 @@ internal sealed class GameBridge : IDisposable
     }
 
     /// <summary>
-    /// Reads the current game snapshot.
-    ///
-    /// NOTE: the polling half of the memory layer (<c>GameStateWatcher</c> + <c>OsuStableReader</c>)
-    /// is not wired into <see cref="GameLinkService"/> yet, so this deliberately reports
-    /// "not available" instead of pretending to know the game state. File-system detection --
-    /// watching <c>Data\r</c> and reading <c>scores.db</c>/<c>osu!.db</c> -- still works and is what
-    /// the auto-detect path actually uses today.
+    /// Returns the latest background memory observation without scanning on the WPF dispatcher.
     /// </summary>
     public GameSnapshot PollSnapshot()
     {
@@ -116,10 +122,7 @@ internal sealed class GameBridge : IDisposable
             return GameSnapshot.NotRunning(Detail);
         }
 
-        return GameSnapshot.NotRunning(
-            _service.Locator.Found
-                ? "in-memory score detection not wired up yet; file-system detection is active"
-                : "osu! executable not found");
+        return _memoryWatcher?.Current ?? GameSnapshot.NotRunning(Detail);
     }
 
     private static AutoDetectResult Project(AutoFillResult result)
@@ -138,7 +141,7 @@ internal sealed class GameBridge : IDisposable
 
         return new AutoDetectResult
         {
-            ReplayPath = result.Replay.Best?.ReplayPath,
+            ReplayPath = result.Replay.IsConfident ? result.Replay.Best?.ReplayPath : null,
             BeatmapPath = result.Beatmap?.Path,
             StatusText = result.StatusText,
             Candidates = candidates
@@ -147,6 +150,8 @@ internal sealed class GameBridge : IDisposable
 
     public void Dispose()
     {
+        _memoryWatcher?.Dispose();
+        _memoryWatcher = null;
         _service?.Dispose();
         _service = null;
     }

@@ -7,7 +7,7 @@ namespace ManiaReplayMaster.Game.Memory;
 ///
 /// Design constraints taken from the plan and honoured here:
 /// <list type="bullet">
-/// <item><b>Data, not logic.</b> Every offset lives in <see cref="OsuStableStructure"/> and every byte
+/// <item><b>Data, not logic.</b> Field offsets live in <see cref="OsuStableStructure"/> and every byte
 /// pattern in <see cref="SignatureTables"/>; this class only walks them, so a new osu! build is handled
 /// by replacing the table.</item>
 /// <item><b>Graceful degradation.</b> Unknown build, denied access, or a null pointer chain produces a
@@ -17,11 +17,8 @@ namespace ManiaReplayMaster.Game.Memory;
 /// <c>PROCESS_VM_READ | PROCESS_QUERY_INFORMATION</c>. Nothing is written to the game.</item>
 /// </list>
 ///
-/// <b>Calibration status:</b> the offsets are transcribed from the public tosu/gosumemory tables quoted
-/// in plan §3.4.2 and have <b>not</b> been confirmed against a running game on this machine (the plan
-/// forbids launching it, and §3.4.3 lists the selected-score offset as an open question). The
-/// self-test target in <c>tools/gamecheck/x86target</c> verifies the machinery — region walking,
-/// chunked reads, 4-byte pointer chains, wildcard signature scanning — but not these offsets.
+/// <b>Calibration:</b> checked against tosu stable.ts and a live b20260924 results screen on
+/// 2026-10-17. The x86 fixture also checks results/gameplay object selection and CLR string layouts.
 /// </summary>
 public sealed class OsuStableReader
 {
@@ -48,8 +45,7 @@ public sealed class OsuStableReader
 
         if (signatures.TryGet(SignatureTables.BaseAddr, out var baseAddr))
         {
-            // The beatmap object is at [baseAddr - 0xC]; that displacement is part of the table's
-            // semantics, not a hard-coded constant in the read logic.
+            // Preserve the instruction match; the field table describes its operand and indirection.
             BaseAddress = baseAddr;
         }
     }
@@ -125,8 +121,6 @@ public sealed class OsuStableReader
             return false;
         }
 
-        // A DirectAddress field whose kind is Int32 and whose mode is ChainAddress is an address, not a
-        // value; the score/gameplay roots are read by their own helpers.
         if (field.Kind == MemoryValueKind.Byte)
         {
             if (!Memory.TryReadByte(address, out var b))
@@ -164,7 +158,7 @@ public sealed class OsuStableReader
             return true;
         }
 
-        if (!TryResolveAddressByName(field.BaseSignature, 0, out var root, out failure))
+        if (!TryResolveAddressByName(field.BaseSignature, field.SignatureOffset, out var root, out failure))
         {
             return false;
         }
@@ -173,13 +167,6 @@ public sealed class OsuStableReader
         {
             address = root;
             return true;
-        }
-
-        if (field.BaseSignature is not null
-            && field.BaseSignature.Equals(SignatureTables.BaseAddr, StringComparison.OrdinalIgnoreCase))
-        {
-            // [Base - 0xC] is the beatmap object; the displacement is table data.
-            root -= 0xC;
         }
 
         if (field.Chain.Count == 0)
@@ -270,6 +257,27 @@ public sealed class OsuStableReader
         address = 0;
         failure = null;
 
+        // Resolve these objects on every read: stable replaces them when changing screens.
+        if (name is OsuStableStructure.Ruleset or OsuStableStructure.GameplayBase
+            or OsuStableStructure.ScoreBase or OsuStableStructure.SelectedScore)
+        {
+            if (!_resolved.TryGetValue(SignatureTables.RulesetsAddr, out var rulesets)
+                || !Memory.TryReadPointer(rulesets - 0xB, out var slot) || slot == 0
+                || !Memory.TryReadPointer(slot + 4, out var ruleset) || ruleset == 0)
+            {
+                failure = "ruleset object unavailable";
+                return false;
+            }
+            address = ruleset;
+            if (name == OsuStableStructure.Ruleset) return true;
+            if (name == OsuStableStructure.GameplayBase)
+                return ReadObjectPointer(ruleset + 0x64, out address, out failure);
+            if (name == OsuStableStructure.SelectedScore || ReadStatus() == 7)
+                return ReadObjectPointer(ruleset + 0x38, out address, out failure);
+            if (!ReadObjectPointer(ruleset + 0x64, out var gameplay, out failure)) return false;
+            return ReadObjectPointer(gameplay + 0x38, out address, out failure);
+        }
+
         if (name.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
             && ulong.TryParse(name[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var literal))
         {
@@ -290,6 +298,16 @@ public sealed class OsuStableReader
         }
 
         failure = $"signature '{name}' did not resolve";
+        return false;
+    }
+
+    private bool ReadObjectPointer(ulong slot, out ulong address, out string? failure)
+    {
+        failure = null;
+        if (Memory.TryReadPointer(slot, out address) && address != 0 && Memory.IsAddressReadable(address))
+            return true;
+        failure = $"object pointer at 0x{slot:X} unavailable";
+        address = 0;
         return false;
     }
 
@@ -325,7 +343,6 @@ public sealed class OsuStableReader
         int? setId = null;
         int? objectCount = null;
         var mode = GameMode.Unknown;
-        double? circleSize = null;
 
         if (TryReadField(OsuStableStructure.BeatmapMd5, out var md5Value, out var md5Failure))
         {
@@ -369,16 +386,12 @@ public sealed class OsuStableReader
             objectCount = (int)countValue.Integer;
         }
 
-        if (TryReadField(OsuStableStructure.CircleSize, out var csValue, out _))
-        {
-            circleSize = csValue.Real;
-            if (circleSize is > 0 and < 10)
-            {
-                mode = GameMode.OsuMania;
-            }
-        }
+        // CS is not a mode indicator: standard/catch maps also commonly have CS 4.
+        if (BaseAddress != 0 && Memory.TryReadPointer(BaseAddress - 0x33, out var modeSlot)
+            && Memory.TryReadInt32(modeSlot, out var rawMode) && rawMode is >= 0 and <= 3)
+            mode = (GameMode)rawMode;
 
-        var hasBeatmapObject = TryReadField(OsuStableStructure.BeatmapMd5, out _, out _);
+        var hasBeatmapObject = md5 is not null;
         if (!hasBeatmapObject
             && folder is null
             && osuFile is null)
@@ -402,7 +415,8 @@ public sealed class OsuStableReader
         var mods = ReadMods(notes);
         var playerName = ReadStringField(OsuStableStructure.PlayerName, notes, "player name");
         var score = ReadIntField(OsuStableStructure.ScoreBase, 0x78, notes, "score");
-        var maxCombo = ReadIntField(OsuStableStructure.ScoreBase, 0x68, notes, "max combo");
+        int? maxCombo = TryResolveAddressByName(OsuStableStructure.ScoreBase, 0, out var comboBase, out _)
+                        && Memory.TryReadUInt16(comboBase + 0x68, out var combo) ? combo : null;
         var retries = ReadIntField(OsuStableStructure.Retries, 0, notes, "retries") ?? 0;
         var hitCounts = ReadHitCounts(notes);
         var isWatchingReplay = ReadReplayFlag(notes);
@@ -417,7 +431,7 @@ public sealed class OsuStableReader
         return new GameSnapshot
         {
             State = state,
-            Status = MemoryReadStatus.Ok,
+            Status = status is null ? MemoryReadStatus.PointerChainFailed : MemoryReadStatus.Ok,
             Detail = detail,
             BeatmapMd5 = md5,
             BeatmapFolder = folder,
@@ -440,7 +454,7 @@ public sealed class OsuStableReader
         };
     }
 
-    /// <summary>Reads the raw game-state value (<c>[Status - 0x4]</c>).</summary>
+    /// <summary>Reads the state through the operand at the status signature match - 4.</summary>
     public int? ReadStatus(List<string>? notes = null)
     {
         if (TryReadField(OsuStableStructure.Status, out var value, out var failure))
@@ -473,6 +487,14 @@ public sealed class OsuStableReader
     /// <summary>Current mods, computed as <c>key1 ^ key2</c>. 0 when unavailable.</summary>
     public int ReadMods(List<string>? notes = null)
     {
+        // Menu mods are a plain mask; gameplay/results mods are XOR keys inside the score object.
+        if (ReadStatus() is not (2 or 7))
+        {
+            if (Signatures.TryGet(SignatureTables.MenuModsPtr, out var operand)
+                && Memory.TryReadPointer(operand, out var slot) && Memory.TryReadInt32(slot, out var menuMods)
+                && PlausibleMods(menuMods)) return menuMods;
+            return 0;
+        }
         var key1Field = OsuStableStructure.Get(OsuStableStructure.ModsXor1)!;
         var key2Field = OsuStableStructure.Get(OsuStableStructure.ModsXor2)!;
 
@@ -498,32 +520,18 @@ public sealed class OsuStableReader
         if (!PlausibleMods(mods))
         {
             notes?.Add($"mods: 0x{mods:X} is not a plausible legacy mod mask (XOR keys may have moved)");
+            return 0;
         }
 
         return mods;
     }
 
     /// <summary>
-    /// Legacy mod masks only use bits 0..30 with a small set of known bits; a value with unrelated high
-    /// bits means the two XOR keys were read from the wrong place.
+    /// Stable legacy mods occupy bits 0..30; bit 31 is unused.
     /// </summary>
     public static bool PlausibleMods(int mods)
     {
-        if (mods == 0)
-        {
-            return true;
-        }
-
-        if (mods < 0)
-        {
-            return false;
-        }
-
-        const int known = (1 << 0) | (1 << 1) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6) | (1 << 7)
-                          | (1 << 8) | (1 << 9) | (1 << 10) | (1 << 12) | (1 << 13) | (1 << 14)
-                          | (1 << 16) | (1 << 17) | (1 << 18) | (1 << 19) | (1 << 20) | (1 << 21)
-                          | (1 << 22) | (1 << 26) | (1 << 27) | (1 << 28) | (1 << 29) | (1 << 30);
-        return (mods & ~known) == 0;
+        return mods >= 0;
     }
 
     public string? ReadPlayerName(List<string>? notes = null)
@@ -538,8 +546,8 @@ public sealed class OsuStableReader
             return null;
         }
 
-        // scoreBase + 0x88 / 0x8A / 0x8C / 0x8E / 0x90 / 0x92 (plan §3.4.2).
-        long[] offsets = { 0x88, 0x8A, 0x8C, 0x8E, 0x90, 0x92 };
+        // stable stores 100 before 300; the rest of this app expects 300 before 100.
+        long[] offsets = { 0x8A, 0x88, 0x8C, 0x8E, 0x90, 0x92 };
         var counts = new int[6];
         for (var i = 0; i < offsets.Length; i++)
         {
@@ -563,27 +571,7 @@ public sealed class OsuStableReader
     /// <summary>True when a replay is actually playing back (<c>canRunSlowly + 0x46</c>).</summary>
     public bool ReadReplayFlag(List<string>? notes = null)
     {
-        if (!TryResolveAddressByName(SignatureTables.CanRunSlowlyAddr, 0, out var address, out var failure))
-        {
-            notes?.Add($"replay flag: {failure}");
-            return false;
-        }
-
-        // The signature points at code that loads a pointer; the flag lives inside the object it points
-        // to (plan §3.4.2: readByte(readInt(canRunSlowlyAddr + 0x46))).
-        if (!Memory.TryReadPointer(address, out var pointer) || pointer == 0)
-        {
-            notes?.Add($"replay flag: cannot dereference 0x{address:X}");
-            return false;
-        }
-
-        if (!Memory.TryReadByte(pointer + 0x46, out var flag))
-        {
-            notes?.Add($"replay flag: cannot read byte at 0x{pointer + 0x46:X}");
-            return false;
-        }
-
-        return flag == 1;
+        return TryReadField(OsuStableStructure.CanRunSlowly, out var value, out _) && value.Integer == 1;
     }
 
     private string? ReadStringField(string fieldName, List<string>? notes, string label)
@@ -637,10 +625,8 @@ public sealed class OsuStableReader
 
     private DateTimeOffset? ReadScoreDate(List<string>? notes)
     {
-        // The results screen's score object is the only place a per-score date appears. The offset is
-        // listed as +0xA0/+0xA4 in the plan, but its representation is not confirmed on this build, so
-        // a failure here is reported and simply leaves the field empty.
-        if (!TryResolveAddressByName(OsuStableStructure.SelectedScore, 0, out var selectedScore, out _))
+        // Both gameplay and result score objects store DateTime.ToBinary at +0xA0.
+        if (!TryResolveAddressByName(OsuStableStructure.ScoreBase, 0, out var selectedScore, out _))
         {
             return null;
         }
@@ -652,7 +638,10 @@ public sealed class OsuStableReader
 
         try
         {
-            return new DateTimeOffset(ticks, TimeSpan.Zero);
+            // stable stores DateTime.ToBinary(), whose top two bits encode DateTimeKind.
+            var date = DateTime.FromBinary(ticks);
+            return date.Kind == DateTimeKind.Unspecified
+                ? new DateTimeOffset(date, TimeSpan.Zero) : new DateTimeOffset(date).ToUniversalTime();
         }
         catch (ArgumentOutOfRangeException)
         {

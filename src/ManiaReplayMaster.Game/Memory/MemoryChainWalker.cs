@@ -153,6 +153,7 @@ public sealed class MemoryChainWalker
                 return true;
             }
 
+            case MemoryValueKind.PointerToManagedString:
             case MemoryValueKind.PointerToAnsiString:
             case MemoryValueKind.PointerToUtf8String:
             {
@@ -162,7 +163,8 @@ public sealed class MemoryChainWalker
                     return false;
                 }
 
-                var text = Reader.TryReadString(pointer);
+                var text = kind == MemoryValueKind.PointerToManagedString
+                    ? Reader.TryReadManagedString(pointer) : Reader.TryReadString(pointer);
                 if (text is null)
                 {
                     failure = $"string pointer 0x{pointer:X} is not readable";

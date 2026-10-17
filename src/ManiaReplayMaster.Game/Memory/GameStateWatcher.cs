@@ -180,10 +180,17 @@ public sealed class GameStateWatcher : IDisposable
     /// </summary>
     public GameSnapshot PollOnce()
     {
-        if (!ProcessMemory.IsRunning(Options.ProcessName))
+        var processId = ProcessMemory.FindProcessId(Options.ProcessName);
+        if (processId is null)
         {
             Detach();
             return GameSnapshot.NotRunning();
+        }
+
+        if (_memory is not null && _memory.ProcessId != processId.Value)
+        {
+            Detach();
+            _nextAttemptUtc = DateTime.MinValue;
         }
 
         if (_reader is null)
@@ -203,6 +210,8 @@ public sealed class GameStateWatcher : IDisposable
         try
         {
             TryRescanSignatures();
+            // CLR heaps can grow after attach. Refresh the map before validating moving objects.
+            _memory!.EnumerateRegions();
             return _reader!.ReadSnapshot();
         }
         catch (Exception ex)        {
@@ -443,6 +452,9 @@ public sealed class GameStateWatcher : IDisposable
            || previous.IsWatchingReplay != current.IsWatchingReplay
            || previous.Score != current.Score
            || previous.MaxCombo != current.MaxCombo
+           || previous.ScoreDate != current.ScoreDate
+           || previous.Mode != current.Mode
+           || !(previous.HitCounts ?? Array.Empty<int>()).SequenceEqual(current.HitCounts ?? Array.Empty<int>())
            || previous.Retries != current.Retries
            || !string.Equals(previous.PlayerName, current.PlayerName, StringComparison.Ordinal);
 

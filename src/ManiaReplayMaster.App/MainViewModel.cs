@@ -83,7 +83,10 @@ internal sealed class MainViewModel : INotifyPropertyChanged
     public bool MemoryEnabled
     {
         get => _memoryEnabled;
-        set => Set(ref _memoryEnabled, value);
+        set
+        {
+            if (Set(ref _memoryEnabled, value)) _game.SetMemoryEnabled(value);
+        }
     }
 
     private string _detectedScoreText = "No score detected yet.";
@@ -310,6 +313,12 @@ internal sealed class MainViewModel : INotifyPropertyChanged
             return false;
         }
 
+        if (!MemoryEnabled)
+        {
+            DetectedScoreText = "Process memory reading is disabled.";
+            return false;
+        }
+
         var result = _game.FromSnapshot(_game.PollSnapshot());
         if (!result.HasAny)
         {
@@ -366,7 +375,8 @@ internal sealed class MainViewModel : INotifyPropertyChanged
     }
 
     private static bool PathsEqual(string a, string b)
-        => string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+        => !string.IsNullOrWhiteSpace(a) && !string.IsNullOrWhiteSpace(b)
+           && string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
 
     public void Dispose() => _game.Dispose();
 

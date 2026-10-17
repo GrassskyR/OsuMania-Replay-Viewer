@@ -21,7 +21,7 @@ index from a local score to its replay, and `Data\r` keeps those replay files fo
 | CLI harness | Working |
 | WPF GUI | Builds and runs the same proven pipeline; not yet smoke-tested interactively |
 | osu! file-system detection (`scores.db`, `osu!.db`, `Data\r`) | Implemented against a measured format spec |
-| osu! in-memory score detection | **Structurally complete but NOT calibrated** — needs the game running to validate signatures/pointer chains |
+| osu! in-memory score detection | **Live-verified on stable b20260924** — score screen → exact local replay + beatmap; WPF auto-fill verified (2026-10-17). See [calibration notes](docs/LIVE_MEMORY_FIX.md) |
 
 See [`docs/HANDOFF.md`](docs/HANDOFF.md) for the precise list of what is and is not verified, plus
 the environment quirks you need to build this.

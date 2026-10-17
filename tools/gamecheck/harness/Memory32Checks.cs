@@ -426,6 +426,15 @@ internal static class Memory32Checks
                 "unresolvable base signature fails cleanly", brokenFailure ?? "(no reason given)");
 
             // ---- mods XOR ------------------------------------------------------------------------
+            StableLayoutChecks.Run(runner, target, ParseHex(fields["stableResults"]), results: true);
+            StableLayoutChecks.Run(runner, target, ParseHex(fields["stablePlaying"]), results: false);
+            var moduleScanTimer = Stopwatch.StartNew();
+            var absent = scanner.ScanRange(moduleBase, moduleBase + moduleSize,
+                MemoryPattern.Parse("DE AD C0 DE FA CE 51 62 73 84 95 A6 B7 C8 D9 EA"));
+            runner.Check(absent.Count == 0 && moduleScanTimer.Elapsed < TimeSpan.FromSeconds(3),
+                "module scan skips inaccessible regions without crawling byte by byte",
+                $"{absent.Count} matches in {moduleScanTimer.Elapsed.TotalMilliseconds:N0} ms");
+
             // The two XOR keys must live inside the 32-bit TARGET's address space. Allocating them in
             // this harness (a 64-bit process) puts them at a 64-bit address that a 4-byte pointer can
             // never reach, so the read could only ever fail. The target already reserves them and
@@ -459,7 +468,7 @@ internal static class Memory32Checks
                     "mods XOR field read", modsValue.Integer.ToString("X") + " " + (modsFailure ?? string.Empty));
                 runner.CheckEqual(modsValue.Integer, 0x48, "mods == key1 ^ key2 (DT|HD)");
                 runner.Check(OsuStableReader.PlausibleMods(0x48), "the XOR result passes the legacy mod-mask sanity gate", "0x48");
-                runner.Check(!OsuStableReader.PlausibleMods(0x12345678), "an implausible mask is rejected by the gate", "0x12345678");
+                runner.Check(!OsuStableReader.PlausibleMods(int.MinValue), "the unused high mod bit is rejected", "0x80000000");
             }
 
             // ---- chunked reads across 4 KB boundaries --------------------------------------------

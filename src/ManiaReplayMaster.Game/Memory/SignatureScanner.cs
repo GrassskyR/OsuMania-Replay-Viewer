@@ -221,6 +221,21 @@ public sealed class SignatureScanner
             return matches;
         }
 
+        // A module spans several regions with different protections. Never shrink a failed read
+        // down to a pattern-sized window and crawl an inaccessible page one byte at a time.
+        if (Reader is ProcessMemory memory && !memory.IsRangeReadable(start, end - start))
+        {
+            foreach (var region in memory.EnumerateRegions())
+            {
+                var from = Math.Max(start, region.BaseAddress);
+                var to = Math.Min(end, region.End);
+                if (to <= from) continue;
+                matches.AddRange(ScanRange(from, to, pattern, maxMatches - matches.Count));
+                if (matches.Count >= maxMatches) break;
+            }
+            return matches;
+        }
+
         var overlap = Math.Max(0, pattern.Length - 1);
         var address = start;
         var window = Math.Min((ulong)WindowSize, Math.Max((ulong)pattern.Length, end - start));

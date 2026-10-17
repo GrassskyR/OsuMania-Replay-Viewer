@@ -25,7 +25,10 @@ public enum MemoryValueKind
     Float = 6,
 
     /// <summary>The address holds the .NET tick count of a <c>DateTime</c> (8 bytes).</summary>
-    DotNetTicks = 7
+    DotNetTicks = 7,
+
+    /// <summary>A pointer to a CLR string object: method table, Int32 length, UTF-16 characters.</summary>
+    PointerToManagedString = 8
 }
 
 /// <summary>How the chain and the offset compose before the value is read.</summary>
@@ -47,8 +50,7 @@ public enum MemoryAccessMode
 /// <summary>
 /// One field of the §3.4.2 offset table, expressed as data. The plan is explicit that these offsets
 /// must be updatable rather than compiled into logic: osu!stable is obfuscated and every update can
-/// move them (risk R1), and none of them can be validated on this machine because the game is not
-/// available for calibration.
+/// move them (risk R1). Verified fields were checked against live stable b20260924 on 2026-10-17.
 ///
 /// <see cref="Verified"/> records exactly that: <c>false</c> means "transcribed from the public
 /// tosu/gosumemory tables in the plan, not confirmed against a running game".
@@ -132,10 +134,8 @@ public sealed record StructureField
 }
 
 /// <summary>
-/// The §3.4.2 field table. Values come straight from the plan's transcription of the public
-/// tosu/gosumemory tables; the plan itself flags that "是否正在看回放", the selected-score offset and
-/// per-build validity all still need a real game session (§3.4.3, V2–V7), so nothing here is marked
-/// <see cref="StructureField.Verified"/>.
+/// Stable structure fields, calibrated against tosu and live stable b20260924 on 2026-10-17.
+/// Instruction operands and object indirection are explicit in SignatureOffset and Chain.
 /// </summary>
 public static class OsuStableStructure
 {
@@ -209,69 +209,46 @@ public static class OsuStableStructure
                 SanityMaximum = sanityMaximum
             };
 
+        // tosu's readPointer(address) reads the operand and then the value at that address.
+        // Keep those two dereferences explicit; ProcessMemory.TryReadPointer reads only once.
+        StructureField B(string name, long offset, MemoryValueKind kind)
+            => F(name, SignatureTables.BaseAddr, offset, kind, chain: new ulong[] { 0, 0 },
+                signatureOffset: -0xC, verified: true);
+        StructureField S(string name, long offset, MemoryValueKind kind)
+            => F(name, ScoreBase, offset, kind, verified: true);
+
         return new[]
         {
-            // The beatmap object sits at [baseAddr - 0xC]; every field below is an offset inside it.
-            F(BeatmapMd5, SignatureTables.BaseAddr, 0x6C, MemoryValueKind.PointerToUtf8String,
-                note: "[[Beatmap] + 0x6C], 32 lowercase hex"),
-            F(BeatmapFolder, SignatureTables.BaseAddr, 0x78, MemoryValueKind.PointerToUtf8String,
-                note: "[[Beatmap] + 0x78]"),
-            F(BeatmapOsuFile, SignatureTables.BaseAddr, 0x90, MemoryValueKind.PointerToUtf8String,
-                note: "[[Beatmap] + 0x90], should end in .osu"),
-            F(BeatmapId, SignatureTables.BaseAddr, 0xC8, MemoryValueKind.Int32, note: "[[Beatmap] + 0xC8]"),
-            F(BeatmapSetId, SignatureTables.BaseAddr, 0xCC, MemoryValueKind.Int32, note: "[[Beatmap] + 0xCC]"),
-            F(BeatmapObjectCount, SignatureTables.BaseAddr, 0xF8, MemoryValueKind.Int32,
-                note: "tosu uses +0xF8; gosumemory (older) used +0xFC"),
-            F(BeatmapArtist, SignatureTables.BaseAddr, 0x18, MemoryValueKind.PointerToUtf8String),
-            F(BeatmapTitle, SignatureTables.BaseAddr, 0x24, MemoryValueKind.PointerToUtf8String),
-            F(BeatmapCreator, SignatureTables.BaseAddr, 0x7C, MemoryValueKind.PointerToUtf8String),
-            F(BeatmapDifficulty, SignatureTables.BaseAddr, 0xAC, MemoryValueKind.PointerToUtf8String),
-            F(ApproachRate, SignatureTables.BaseAddr, 0x2C, MemoryValueKind.Float),
-            F(CircleSize, SignatureTables.BaseAddr, 0x30, MemoryValueKind.Float,
-                note: "key count for mania"),
-            F(HpDrain, SignatureTables.BaseAddr, 0x34, MemoryValueKind.Float),
-            F(OverallDifficulty, SignatureTables.BaseAddr, 0x38, MemoryValueKind.Float),
-
-            // Songs directory: [[[Settings + 0x8] + 0xB8] + 0x4]
-            F(SongsDirectory, SignatureTables.SettingsClassAddr, 0x4, MemoryValueKind.PointerToUtf8String,
-                chain: new ulong[] { 0x8, 0xB8 },
-                note: "[[[Settings + 0x8] + 0xB8] + 0x4]"),
-
-            // Ruleset / gameplay / score.
-            F(Ruleset, null, 0, MemoryValueKind.Int32, mode: MemoryAccessMode.DirectAddress,
-                addressSignature: SignatureTables.RulesetsAddr, signatureOffset: -0xB,
-                note: "readInt(readInt(rulesetsAddr - 0xB) + 0x4); the final +0x4 is applied by the reader"),
-            F(GameplayBase, null, 0, MemoryValueKind.Int32, mode: MemoryAccessMode.DirectAddress,
-                addressSignature: SignatureTables.RulesetsAddr + "+0x64",
-                note: "readInt(ruleset + 0x64)"),
-            F(ScoreBase, null, 0, MemoryValueKind.Int32, mode: MemoryAccessMode.DirectAddress,
-                addressSignature: SignatureTables.RulesetsAddr + "+0x64+0x38",
-                note: "readInt(gameplayBase + 0x38)"),
-            F(PlayerName, null, 0x28, MemoryValueKind.PointerToUtf8String, mode: MemoryAccessMode.DirectAddress,
-                addressSignature: SignatureTables.RulesetsAddr + "+0x64+0x38+0x28",
-                note: "[[[Ruleset + 0x68] + 0x38] + 0x28]; the intermediate chain is not confirmed on this build"),
-            F(ModsXor1, null, 0, MemoryValueKind.Int32, mode: MemoryAccessMode.DirectAddress,
-                addressSignature: SignatureTables.MenuModsPtr,
-                note: "first XOR key of the current mods"),
-            F(ModsXor2, null, 0x4, MemoryValueKind.Int32, mode: MemoryAccessMode.DirectAddress,
-                addressSignature: SignatureTables.MenuModsPtr,
-                note: "second XOR key; mods = key1 ^ key2"),
+            B(BeatmapMd5, 0x6C, MemoryValueKind.PointerToManagedString),
+            B(BeatmapFolder, 0x78, MemoryValueKind.PointerToManagedString),
+            B(BeatmapOsuFile, 0x90, MemoryValueKind.PointerToManagedString),
+            B(BeatmapId, 0xC8, MemoryValueKind.Int32),
+            B(BeatmapSetId, 0xCC, MemoryValueKind.Int32),
+            B(BeatmapObjectCount, 0xF8, MemoryValueKind.Int32),
+            B(BeatmapArtist, 0x18, MemoryValueKind.PointerToManagedString),
+            B(BeatmapTitle, 0x24, MemoryValueKind.PointerToManagedString),
+            B(BeatmapCreator, 0x7C, MemoryValueKind.PointerToManagedString),
+            B(BeatmapDifficulty, 0xAC, MemoryValueKind.PointerToManagedString),
+            B(ApproachRate, 0x2C, MemoryValueKind.Float),
+            B(CircleSize, 0x30, MemoryValueKind.Float),
+            B(HpDrain, 0x34, MemoryValueKind.Float),
+            B(OverallDifficulty, 0x38, MemoryValueKind.Float),
+            F(SongsDirectory, SignatureTables.SettingsClassAddr, 0x4, MemoryValueKind.PointerToManagedString,
+                chain: new ulong[] { 0x8, 0xB8 }, verified: true),
+            F(Ruleset, SignatureTables.RulesetsAddr, 4, MemoryValueKind.Int32,
+                chain: new ulong[] { 0 }, signatureOffset: -0xB, verified: true),
+            F(GameplayBase, Ruleset, 0x64, MemoryValueKind.Int32),
+            S(PlayerName, 0x28, MemoryValueKind.PointerToManagedString),
+            F(ModsXor1, ScoreBase, 0xC, MemoryValueKind.Int32, chain: new ulong[] { 0x1C }, verified: true),
+            F(ModsXor2, ScoreBase, 0x8, MemoryValueKind.Int32, chain: new ulong[] { 0x1C }, verified: true),
             F(Retries, SignatureTables.BaseAddr, 0x8, MemoryValueKind.Int32,
-                note: "readInt(readInt(baseAddr - 0x33) + 0x8); the -0x33 is applied before this field's chain"),
-            F(CanRunSlowly, null, 0x46, MemoryValueKind.Byte, mode: MemoryAccessMode.DirectAddress,
-                addressSignature: SignatureTables.CanRunSlowlyAddr,
-                note: "readByte(readInt(canRunSlowlyAddr + 0x46)) == 1 means a replay is playing back"),
-            F(Status, null, -0x4, MemoryValueKind.Int32, mode: MemoryAccessMode.DirectAddress,
-                addressSignature: SignatureTables.StatusPtr, signatureOffset: -0x4,
-                note: "[Status - 0x4] -> 0 menu / 1 song select / 2 playing / 7 results",
-                sanityMaximum: 64),
-            F(GameTime, SignatureTables.GameTimePtr, 0, MemoryValueKind.Int32,
-                note: "game clock; used to detect a stalled read"),
-            F(SelectedScore, SignatureTables.RulesetsAddr, 0x38, MemoryValueKind.Int32,
-                mode: MemoryAccessMode.DirectAddress,
-                addressSignature: SignatureTables.RulesetsAddr + "+0x38",
-                note: "readInt(ruleset + 0x38) -> selected score object. UNVERIFIED: the plan §3.4.3 " +
-                      "unknown #1 asks whether the *selected* local-leaderboard row has a stable offset at all")
+                chain: new ulong[] { 0 }, signatureOffset: -0x33, verified: true),
+            F(CanRunSlowly, SignatureTables.CanRunSlowlyAddr, 0, MemoryValueKind.Byte,
+                chain: new ulong[] { 0 }, signatureOffset: 0x46, verified: true),
+            F(Status, SignatureTables.StatusPtr, 0, MemoryValueKind.Int32,
+                chain: new ulong[] { 0 }, sanityMaximum: 64, verified: true),
+            F(GameTime, SignatureTables.GameTimePtr, 0, MemoryValueKind.Int32, verified: true),
+            F(SelectedScore, Ruleset, 0x38, MemoryValueKind.Int32, verified: true)
         };
     }
 }
@@ -289,12 +266,11 @@ public static class OsuStableStructure
 /// scanner performs. A module-image scan silently returns 0 of 10 and disables the memory layer.
 ///
 /// The tables are still treated as data: versioned, replaceable, and every failure is reported per entry so
-/// an unrecognised build degrades to the file-system path instead of misreporting the game state. None of
-/// the offsets has been calibrated against a live game on this machine (plan §3.4.3, V2–V7).
+/// an unrecognised build degrades to the file-system path instead of misreporting the game state. The score and beatmap chains were calibrated against live stable b20260924 on 2026-10-17.
 /// </summary>
 public static class SignatureTables
 {
-    public const string GameVersionRange = "osu!stable 2026 build (b20260924) — scan scope verified, offsets UNVERIFIED";
+    public const string GameVersionRange = "osu!stable b20260924 — live-calibrated 2026-10-17";
 
     // Names used by the field table.
     public const string BaseAddr = "baseAddr";
@@ -326,12 +302,12 @@ public static class SignatureTables
 
     /// <summary>The stable table quoted in plan §3.4.2.</summary>
     public static SignatureTable Stable { get; } = new(
-        "osu!stable (plan §3.4.2)",
+        "osu!stable (tosu, calibrated b20260924)",
         GameVersionRange,
         StableEntry(BaseAddr, "F8 01 74 04 83 65",
             Note: "root of every pointer chain"),
         StableEntry(StatusPtr, "48 83 F8 04 73 1E", SignatureStrategy.MatchAddressPlusOffset, -0x4,
-            Note: "[Status - 0x4] -> game state"),
+            Note: "operand at match - 4 -> state address"),
         StableEntry(PlayTimeAddr, "5E 5F 5D C3 A1 ?? ?? ?? ?? 89 ?? 04",
             Note: "play time; offset 0x1 in the tosu tables"),
         StableEntry(SettingsClassAddr, "83 E0 20 85 C0 7E 2F",
@@ -340,12 +316,13 @@ public static class SignatureTables
             Note: "current ruleset (beatmap) root"),
         StableEntry(CanRunSlowlyAddr, "55 8B EC 80 3D ?? ?? ?? ?? 00 75 26 80 3D",
             Note: "replay playback flag"),
-        StableEntry(GameTimePtr, "A1 ?? ?? ?? ?? 89 46 04 8B D6 E8", SignatureStrategy.RelativeCallTarget,
+        StableEntry(GameTimePtr, "A1 ?? ?? ?? ?? 89 46 04 8B D6 E8", SignatureStrategy.AbsoluteDataReference,
             Note: "game clock; tosu applies offset 0x1"),
         StableEntry(SkinDataAddr, "74 2C 85 FF 75 28 A1 ?? ?? ?? ?? 8D 15",
             Note: "skin data"),
         StableEntry(MenuModsPtr, "C8 FF ?? ?? ?? ?? ?? 81 0D ?? ?? ?? ?? ?? 08 00 00",
-            Note: "menu mods (the two XOR keys)"),
+            SignatureStrategy.MatchAddressPlusOffset, 0x9,
+            Note: "operand at match + 9 -> menu mod mask; score mods use their own XOR object"),
         StableEntry(ManiaSpeed, "a3 ?? ?? ?? ?? eb ?? dd 45 08 db 5d e8 8b 45 e8 83 f8 28",
             Note: "mania scroll speed"));
 
