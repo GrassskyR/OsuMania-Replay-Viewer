@@ -82,6 +82,12 @@ curl.exe -sSL --ssl-no-revoke -o "packages\my.package.1.0.0.nupkg" `
 4. Adjust speed / resolution / FPS / codec, then press **Render**. **Judge only** runs the judgement and prints the counts without encoding.
 5. Cancel is supported — it aborts rendering between windows and kills the running ffmpeg.
 
+Videos are saved in the configured output directory as
+`Player - Artist - Title [Difficulty] (yyyy-MM-dd) OsuMania.mp4` (with the replay's mode and local play date).
+This also gives hash-named `Data\r` replays readable names. Invalid Windows filename characters are
+replaced with `_`; very long names are shortened with a hash suffix. Malody replays and files missing
+the naming metadata keep the original replay filename stem.
+
 ---
 
 ## Project layout

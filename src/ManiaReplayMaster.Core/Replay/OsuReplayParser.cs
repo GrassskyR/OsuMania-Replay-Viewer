@@ -80,6 +80,15 @@ public static class OsuReplayParser
 
     public static OsuReplay Parse(OsuBinaryReader reader)
     {
+        var replay = ParseHeader(reader);
+        replay.CompressedData = reader.ReadBytes();
+        replay.OnlineScoreId = reader.ReadInt64();
+        return replay;
+    }
+
+    /// <summary>Reads through the timestamp, leaving the compressed payload unread.</summary>
+    public static OsuReplay ParseHeader(OsuBinaryReader reader)
+    {
         var replay = new OsuReplay
         {
             Mode = (OsuMode)reader.ReadByte(),
@@ -98,11 +107,9 @@ public static class OsuReplayParser
             Perfect = reader.ReadBoolean(),
             Mods = reader.ReadInt32(),
             Diagram = reader.ReadLine(),
-            TimestampTicks = reader.ReadInt64(),
-            CompressedData = reader.ReadBytes()
+            TimestampTicks = reader.ReadInt64()
         };
 
-        replay.OnlineScoreId = reader.ReadInt64();
         return replay;
     }
 

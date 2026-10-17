@@ -47,10 +47,14 @@ public static class RenderExporter
         public required string ReplayPath { get; init; }
     }
 
+    /// <summary>
+    /// Exports to an explicit path, or uses Config.OutputDir with an osu! export-style name
+    /// when outputVideoPath is omitted.
+    /// </summary>
     public static Result Run(
         string beatMapPath,
         string replayPath,
-        string outputVideoPath,
+        string? outputVideoPath = null,
         string? tempDirectory = null,
         Config? config = null,
         IProgress<EncodeProgress>? progress = null,
@@ -60,7 +64,8 @@ public static class RenderExporter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(beatMapPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(replayPath);
-        ArgumentException.ThrowIfNullOrWhiteSpace(outputVideoPath);
+        if (outputVideoPath is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(outputVideoPath);
 
         config ??= Config.Instance;
         log ??= PortLogger.FromConfig(config);
@@ -73,6 +78,15 @@ public static class RenderExporter
         {
             var preparation = PipelineRunner.Prepare(beatMapPath, replayPath, temp,
                 (key, args) => log.Debug(key, args));
+
+            // Resolve archive/directory inputs before reading the beatmap's display metadata.
+            if (outputVideoPath is null)
+            {
+                var outputDirectory = Path.GetFullPath(config.OutputDir);
+                Directory.CreateDirectory(outputDirectory);
+                outputVideoPath = Path.Combine(outputDirectory,
+                    ReplayVideoFileName.Create(preparation.BeatmapPath, preparation.ReplayPath));
+            }
 
             var imagePath = Path.Combine(temp, Path.GetFileNameWithoutExtension(replayPath) + ".png");
 

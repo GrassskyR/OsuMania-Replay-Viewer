@@ -256,8 +256,6 @@ public partial class MainWindow : Window
         var outputDir = Path.GetFullPath(config.OutputDir);
         Directory.CreateDirectory(outputDir);
 
-        var output = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(replay) + ".mp4");
-
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
         _vm.IsBusy = true;
@@ -267,7 +265,7 @@ public partial class MainWindow : Window
         _vm.ProgressText = "starting…";
         _vm.Log(judgeOnly
             ? $"Judging {Path.GetFileName(replay)}…"
-            : $"Rendering {Path.GetFileName(replay)} → {Path.GetFileName(output)}");
+            : $"Rendering {Path.GetFileName(replay)}…");
 
         var progress = new Progress<EncodeProgress>(p =>
         {
@@ -286,7 +284,7 @@ public partial class MainWindow : Window
                 else
                 {
                     var result = ManiaReplayMaster.Render.RenderExporter.Run(
-                        beatmap, replay, output,
+                        beatmap, replay,
                         tempDirectory: null,
                         config: config,
                         progress: progress,
