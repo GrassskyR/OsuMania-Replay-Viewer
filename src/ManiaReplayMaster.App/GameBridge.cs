@@ -142,7 +142,7 @@ internal sealed class GameBridge : IDisposable
                 ReplayPath = c.ReplayPath,
                 Describe = () => c.Header is null
                     ? $"[{i + 1}] {Path.GetFileName(c.ReplayPath)}  ({c.Source}, {c.Confidence:P0})"
-                    : Text("Game.Candidate", i + 1, c.Header.Username ?? Text("Game.NoPlayer"), c.Header.Score,
+                    : Text("Game.Candidate", i + 1, PlayerDisplayName(c.Header.Username), c.Header.Score,
                         c.Header.Mods == 0 ? Text("Game.NoMods") : "0x" + c.Header.Mods.ToString("X"),
                         c.Header.MaxCombo, c.Header.Mode)
             })
@@ -167,9 +167,12 @@ internal sealed class GameBridge : IDisposable
                 : Text("Game.ReplayFound", Path.GetFileName(best.ReplayPath), best.Confidence)
         };
         if (result.Replay.Best?.Header is { } header)
-            parts.Add(Text("Game.Score", header.Username ?? Text("Game.NoPlayer"), header.Score, header.MaxCombo));
+            parts.Add(Text("Game.Score", PlayerDisplayName(header.Username), header.Score, header.MaxCombo));
         return string.Join("  ·  ", parts);
     }
+
+    private static string PlayerDisplayName(string? player)
+        => string.IsNullOrWhiteSpace(player) ? Text("Game.NoPlayer") : player;
 
     public void Dispose()
     {

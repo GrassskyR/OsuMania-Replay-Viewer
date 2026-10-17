@@ -17,6 +17,8 @@ internal sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly GameBridge _game = new();
 
+    public IReadOnlyList<CandidateItem>? DetectedCandidates { get; private set; }
+
     public MainViewModel()
     {
         var config = Core.Model.Config.Instance;
@@ -334,7 +336,12 @@ internal sealed class MainViewModel : INotifyPropertyChanged
             return false;
         }
 
-        var result = _game.FromSnapshot(_game.PollSnapshot());
+        var snapshot = _game.PollSnapshot();
+        var result = _game.FromSnapshot(snapshot);
+        // Candidate selection must also work when no replay is confident enough for auto-fill.
+        // Outside a score screen, preserve the list loaded from a manually chosen replay.
+        if (snapshot.HasBeatmapIdentity && snapshot.State is Game.OsuGameState.Results or Game.OsuGameState.ScorePanelOpen)
+            DetectedCandidates = result.Candidates;
         if (!result.HasAny)
         {
             if (!string.IsNullOrWhiteSpace(result.StatusText))

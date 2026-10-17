@@ -785,9 +785,12 @@ public sealed class ReplayResolver
             headerMods is null ? null : ScoreRecord.ModsToString(headerMods.Value));
 
         var player = snapshot?.PlayerName;
-        var headerPlayer = header?.Username ?? score?.PlayerName;
+        // Empty names are valid for local/offline scores. A parsed file's null string marker also
+        // represents an empty name; a null snapshot name may mean the memory read was unavailable.
+        var headerPlayer = header is not null ? header.Username ?? string.Empty
+            : score is not null ? score.PlayerName ?? string.Empty : null;
         Compare("player", Weights.Player,
-            string.IsNullOrEmpty(player) || string.IsNullOrEmpty(headerPlayer)
+            player is null || headerPlayer is null
                 ? null
                 : string.Equals(player, headerPlayer, StringComparison.OrdinalIgnoreCase),
             headerPlayer);
@@ -830,6 +833,15 @@ public sealed class ReplayResolver
             // The Data\r file is written immediately after the play, so mtime tracks the play time.
             var delta = Math.Abs((fileModified.Value - date.Value).TotalSeconds);
             Compare("mtime", Weights.ModifiedTime, delta <= 300, $"delta {delta:N0}s");
+        }
+
+        // A null name can also come from an offline score's null CLR string. Only waive that
+        // missing field when score, full hit counts and play date independently agree.
+        if (player is null && strongEvidence.Contains("score") && strongEvidence.Contains("hits")
+            && strongEvidence.Contains("date"))
+        {
+            max -= Weights.Player;
+            why.Add("player=unavailable (score/hits/date match)");
         }
 
         if (max <= 0)

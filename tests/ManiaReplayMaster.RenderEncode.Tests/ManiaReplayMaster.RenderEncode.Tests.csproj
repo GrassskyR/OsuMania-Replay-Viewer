@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\ManiaReplayMaster.Core\ManiaReplayMaster.Core.csproj" />
     <ProjectReference Include="..\..\src\ManiaReplayMaster.Encode\ManiaReplayMaster.Encode.csproj" />
     <ProjectReference Include="..\..\src\ManiaReplayMaster.Render\ManiaReplayMaster.Render.csproj" />
+    <ProjectReference Include="..\..\src\ManiaReplayMaster.Game\ManiaReplayMaster.Game.csproj" />
   </ItemGroup>
 
   <ItemGroup>

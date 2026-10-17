@@ -18,6 +18,8 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _detectTimer;
     private CancellationTokenSource? _cts;
     private DateTime _startedAt;
+    private IReadOnlyList<CandidateItem>? _lastDetectedCandidates;
+    private bool _updatingCandidates;
 
     public MainWindow()
     {
@@ -43,9 +45,14 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (_vm.PollAutoDetect())
+            var changed = _vm.PollAutoDetect();
+            if (_vm.DetectedCandidates is { } candidates && !ReferenceEquals(candidates, _lastDetectedCandidates))
             {
-                RefreshCandidateList();
+                _lastDetectedCandidates = candidates;
+                UpdateCandidateList(candidates);
+            }
+            if (changed)
+            {
                 if (_vm.AutoStartRender && _vm.CanRender)
                 {
                     _vm.Log(Text("Log.AutoStart"));
@@ -174,20 +181,16 @@ public partial class MainWindow : Window
 
     private void RefreshCandidateList()
     {
-        ScoreCandidateBox.ItemsSource = null;
         if (string.IsNullOrWhiteSpace(_vm.ReplayPath) || !File.Exists(_vm.ReplayPath))
         {
+            UpdateCandidateList(Array.Empty<CandidateItem>());
             return;
         }
 
         try
         {
             var candidates = _vm.CandidatesFromReplay(_vm.ReplayPath);
-            ScoreCandidateBox.ItemsSource = candidates;
-            if (candidates.Count > 1)
-            {
-                ScoreCandidateBox.SelectedIndex = 0;
-            }
+            UpdateCandidateList(candidates);
         }
         catch (Exception ex)
         {
@@ -195,12 +198,34 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateCandidateList(IReadOnlyList<CandidateItem> candidates)
+    {
+        // Polling must not reset an open menu or select an unverified replay on the user's behalf.
+        if (ScoreCandidateBox.ItemsSource is IReadOnlyList<CandidateItem> current
+            && current.Select(c => (c.ReplayPath, c.Display)).SequenceEqual(candidates.Select(c => (c.ReplayPath, c.Display))))
+            return;
+
+        _updatingCandidates = true;
+        try
+        {
+            ScoreCandidateBox.ItemsSource = candidates;
+            ScoreCandidateBox.SelectedItem = candidates.FirstOrDefault(c =>
+                string.Equals(c.ReplayPath, _vm.ReplayPath, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _updatingCandidates = false;
+        }
+    }
+
     private void OnCandidateSelected(object sender, SelectionChangedEventArgs e)
     {
+        if (_updatingCandidates) return;
         if (ScoreCandidateBox.SelectedItem is CandidateItem item)
         {
             _vm.ReplayPath = item.ReplayPath;
             _vm.Log(Text("Log.CandidateSelected", item.Display));
+            AutoLocateIfPossible();
         }
     }
 
