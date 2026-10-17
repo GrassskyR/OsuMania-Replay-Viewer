@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- The whole point of this project is to be a 32-bit target process, so that a 64-bit host can
+         be tested against it exactly like it will be against osu!.exe (a 32-bit WOW64 process). -->
+    <TargetFramework>net8.0</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+    <Platforms>x86</Platforms>
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <!-- Only .NET 10 x86 is installed on this machine, so allow roll-forward from net8.0. -->
+    <RollForward>Major</RollForward>
+    <AssemblyName>x86target</AssemblyName>
+    <RootNamespace>ManiaReplayMaster.X86Target</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>

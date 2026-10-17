@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>ManiaReplayMaster.Cli</RootNamespace>
+    <AssemblyName>mrm</AssemblyName>
+    <RollForward>Major</RollForward>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ManiaReplayMaster.Core\ManiaReplayMaster.Core.csproj" />
+  </ItemGroup>
+
+</Project>

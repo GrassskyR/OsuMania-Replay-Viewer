@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- Brings in System.Drawing.Common (GDI+) from the Windows Desktop framework. It is the
+         closest analogue to Java AWT and needs no third-party package. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>ManiaReplayMaster.Render</RootNamespace>
+    <AssemblyName>ManiaReplayMaster.Render</AssemblyName>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ManiaReplayMaster.Core\ManiaReplayMaster.Core.csproj" />
+    <ProjectReference Include="..\ManiaReplayMaster.Encode\ManiaReplayMaster.Encode.csproj" />
+  </ItemGroup>
+
+</Project>

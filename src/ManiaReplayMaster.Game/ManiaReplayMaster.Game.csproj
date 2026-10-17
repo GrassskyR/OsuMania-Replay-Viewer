@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>ManiaReplayMaster.Game</RootNamespace>
+    <AssemblyName>ManiaReplayMaster.Game</AssemblyName>
+    <!-- The host is x64 and the target process (osu!.exe) is a 32-bit WOW64 process.
+         64-bit host -> 32-bit target is the supported direction; the reverse is not. -->
+    <PlatformTarget>x64</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ManiaReplayMaster.Core\ManiaReplayMaster.Core.csproj" />
+  </ItemGroup>
+
+</Project>
