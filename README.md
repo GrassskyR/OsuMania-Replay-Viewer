@@ -13,9 +13,9 @@ Windows 原生回放渲染工具，使用 C# / .NET 8 + WPF，将 osu!mania、os
 
 ## 运行
 
-需要 **Windows 10/11 x64** 与 **FFmpeg**。自行构建时可选择自包含发布，发布目录内的程序无需另装 .NET；普通构建产物需要 [.NET 8 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/8.0)。
+需要 **Windows 10/11 x64**。Release 包已附带 .NET 运行时和 FFmpeg，解压后即可运行，无需另行安装。普通构建产物需要 [.NET 8 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/8.0)。
 
-安装包含 `libx264` 和 AAC 编码器的 FFmpeg，将 `ffmpeg.exe` 放在应用程序旁，或加入 `PATH`。运行端的查找顺序为：显式路径、应用目录、当前目录、`PATH`、常见安装目录与 WinGet 链接。FFmpeg 不随程序分发。
+请保留 Release 包中与应用同目录的 `ffmpeg.exe`。自行使用普通构建产物时，安装包含 `libx264` 和 AAC 编码器的 FFmpeg，将其放在应用程序旁，或加入 `PATH`。运行端的查找顺序为：显式路径、应用目录、当前目录、`PATH`、常见安装目录与 WinGet 链接。
 
 1. 启动 `ManiaReplayMaster.exe`。
 2. 拖入 `.osr` 或 `.mr`，也可通过“浏览”选择文件；osu! 谱面会尝试根据回放中的 MD5 自动定位。未找到时手动选择 `.osu` / `.osz`，Malody 使用 `.mc` / `.mcz`。
@@ -51,9 +51,14 @@ Player - Artist - Title [Difficulty] (2026-10-17) OsuMania.mp4
 ./build.ps1 e2e         # 视频导出、错误/取消和逐帧滚动测试
 ./build.ps1 test-all    # 全部测试
 ./build.ps1 publish     # 自包含 Windows x64 发布
+./build.ps1 publish-single # 单文件应用 EXE，附带 FFmpeg 和许可证的 Release ZIP
 ```
 
-发布目录为 `artifacts/win-x64/`。分发整个目录，包括中文资源、LICENSE、NOTICE、第三方声明及运行时许可文件；FFmpeg 需另行安装。发布不包含测试、谱面、回放和歌曲音频。
+发布目录为 `artifacts/win-x64/`。分发整个目录，包括中文资源、FFmpeg、LICENSE、NOTICE、第三方声明及运行时许可文件。发布不包含测试、谱面、回放和歌曲音频。
+
+单文件发布位于 `artifacts/win-x64-single/ManiaReplayMaster.exe`，已内置 .NET 运行时和中英文资源，无需另装 .NET 或携带 DLL。首次启动时，.NET 会把所需原生运行库解压到用户临时目录。分发时使用 `artifacts/ManiaReplayViewer-win-x64-single.zip`，其中包含应用 EXE、同目录的 `ffmpeg.exe` 及许可证文件。
+
+两种发布命令均自动下载固定版本的 Gyan FFmpeg 9.0.2 essentials 静态构建，校验 SHA-256 后缓存到 `out/dependencies/ffmpeg/`，并保留上游说明和许可。仅构建时需要网络，用户运行时不需要下载。FFmpeg 通过独立进程执行；“单文件”指 .NET 应用本体，整个发布包包含两个 EXE。离线发布可事先将原始 `ffmpeg-9.0.2-essentials_build.zip` 放入该缓存目录。
 
 脚本优先使用 `DOTNET_ROOT`，其次查找标准 x64 安装目录与 `PATH`。便携 SDK 可显式指定：
 

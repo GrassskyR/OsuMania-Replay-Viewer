@@ -21,9 +21,10 @@
 
   <ItemGroup>
     <Content Include="..\..\LICENSE;..\..\NOTICE;..\..\THIRD-PARTY-NOTICES.md;..\..\README.md"
-             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             ExcludeFromSingleFile="true" />
     <Content Include="..\..\licenses\*.txt" Link="licenses\%(Filename)%(Extension)"
-             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <Target Name="CopyRuntimeNotices" AfterTargets="Publish" Condition="'$(SelfContained)' == 'true'">

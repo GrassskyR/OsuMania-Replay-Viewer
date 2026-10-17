@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'restore', 'build', 'test', 'test-all', 'e2e', 'publish', 'app', 'cli', 'appcheck', 'gamecheck')]
+    [ValidateSet('help', 'restore', 'build', 'test', 'test-all', 'e2e', 'publish', 'publish-single', 'app', 'cli', 'appcheck', 'gamecheck')]
     [string]$Command = 'help',
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
@@ -23,7 +23,8 @@ Commands:
   test          Run tests that do not need FFmpeg
   e2e           Run FFmpeg export, cancellation and scroll cadence tests
   test-all      Run all tests (requires FFmpeg and ffprobe)
-  publish       Publish a self-contained Windows x64 app to artifacts/win-x64
+  publish       Publish a self-contained Windows x64 app with FFmpeg to artifacts/win-x64
+  publish-single Publish a single app executable plus FFmpeg, licenses and a release ZIP
   app           Build and launch the WPF application
   cli <args>    Run the parser/judgement CLI
   appcheck      Build and run the interactive GUI smoke check
@@ -83,10 +84,24 @@ try {
             if ($Command -eq 'e2e') { $filter = @('--filter', 'Category=EndToEnd') }
             Invoke-Dotnet (@('test', $solution, '-c', $Configuration, '--nologo') + $restoreOptions + $filter + $forwarded)
         }
-        'publish' {
+        { $_ -in 'publish', 'publish-single' } {
+            $singleFile = $Command -eq 'publish-single'
+            $publishFolder = if ($singleFile) { 'artifacts/win-x64-single' } else { 'artifacts/win-x64' }
+            $publishOutput = Join-Path $PSScriptRoot $publishFolder
+            $publishOptions = @()
+            if ($singleFile) {
+                $publishOptions = @('-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true',
+                    '-p:EnableCompressionInSingleFile=true', '-p:DebugType=None', '-p:DebugSymbols=false')
+            }
             Invoke-Dotnet (@('publish', $appProject, '-c', $Configuration, '-r', 'win-x64',
                 '--self-contained', 'true', '-p:PublishTrimmed=false',
-                '-o', (Join-Path $PSScriptRoot 'artifacts/win-x64')) + $restoreOptions + $forwarded)
+                '-o', $publishOutput) + $publishOptions + $restoreOptions + $forwarded)
+            & (Join-Path $PSScriptRoot 'tools/package-ffmpeg.ps1') -Destination $publishOutput
+            if ($singleFile) {
+                $archivePath = Join-Path $PSScriptRoot 'artifacts/ManiaReplayViewer-win-x64-single.zip'
+                Compress-Archive -Path (Join-Path $publishOutput '*') -DestinationPath $archivePath -Force
+                Write-Host "Release archive: $archivePath"
+            }
         }
         'app' { Invoke-Dotnet (@('run', '--project', $appProject, '-c', $Configuration) + $restoreOptions + @('--') + $forwarded) }
         'cli' {

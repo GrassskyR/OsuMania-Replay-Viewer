@@ -20,6 +20,11 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - name: Cache release FFmpeg archive
+        uses: actions/cache@v4
+        with:
+          path: out/dependencies/ffmpeg/
+          key: ffmpeg-win-x64-${{ hashFiles('tools/package-ffmpeg.ps1') }}
       - name: Build
         run: ./build.ps1 build
       - name: Unit and reference tests
@@ -28,14 +33,22 @@ jobs:
         run: ./build.ps1 gamecheck -- memory32
       - name: Install FFmpeg
         run: choco install ffmpeg --yes --no-progress
+      - name: Publish self-contained application
+        run: ./build.ps1 publish
       - name: Export and frame cadence tests
         run: |
           $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
+          $env:MRM_FFMPEG = "$PWD/artifacts/win-x64/ffmpeg.exe"
           ./build.ps1 e2e -- --no-build --no-restore
-      - name: Publish self-contained application
-        run: ./build.ps1 publish
       - uses: actions/upload-artifact@v4
         with:
           name: ManiaReplayViewer-win-x64
           path: artifacts/win-x64/
+          if-no-files-found: error
+      - name: Publish single executable
+        run: ./build.ps1 publish-single
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ManiaReplayViewer-win-x64-single
+          path: artifacts/ManiaReplayViewer-win-x64-single.zip
           if-no-files-found: error
