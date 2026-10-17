@@ -20,7 +20,7 @@
   <data name="ReadMemory" xml:space="preserve"><value>读取游戏内存</value></data>
   <data name="ReadMemory.Tooltip" xml:space="preserve"><value>读取 osu! 当前成绩，定位对应回放。</value></data>
   <data name="DebugLogging" xml:space="preserve"><value>调试日志</value></data>
-  <data name="Speed" xml:space="preserve"><value>滚动速度</value></data>
+  <data name="Speed" xml:space="preserve"><value>下落速度</value></data>
   <data name="Width" xml:space="preserve"><value>宽度</value></data>
   <data name="Height" xml:space="preserve"><value>高度</value></data>
   <data name="FPS" xml:space="preserve"><value>帧率</value></data>
