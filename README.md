@@ -46,6 +46,10 @@
 ./build.ps1 gamecheck -- scoredb --root 'D:/osu!'
 ```
 
+### 发布 Release
+
+在 GitHub Actions 中手动运行 **Windows release**，选择分支并填写版本 tag（如 `v0.1.0`）。如果 tag 尚不存在，会构建本次运行所选分支的提交，通过测试后创建 tag 和 Release；如果 tag 已存在，则构建该 tag 对应的提交。推送 `v*` tag 也会自动触发发布。
+
 ## 项目结构
 
 | 目录 | 说明 |

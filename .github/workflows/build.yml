@@ -16,12 +16,12 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
       - name: Cache release FFmpeg archive
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: out/dependencies/ffmpeg/
           key: ffmpeg-win-x64-${{ hashFiles('tools/package-ffmpeg.ps1') }}
@@ -40,14 +40,14 @@ jobs:
           $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
           $env:MRM_FFMPEG = "$PWD/artifacts/win-x64/ffmpeg.exe"
           ./build.ps1 e2e -- --no-build --no-restore
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ManiaReplayViewer-win-x64
           path: artifacts/win-x64/
           if-no-files-found: error
       - name: Publish single executable
         run: ./build.ps1 publish-single
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ManiaReplayViewer-win-x64-single
           path: artifacts/ManiaReplayViewer-win-x64-single.zip
