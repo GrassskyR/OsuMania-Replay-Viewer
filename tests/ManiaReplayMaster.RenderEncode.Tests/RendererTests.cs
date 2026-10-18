@@ -26,7 +26,8 @@ public class RendererTests
         var temp = RepoPaths.CreateTempDirectory();
         try
         {
-            var config = new Config();
+            // Odd width exercises the BGR stride padding in the PNG writer.
+            var config = new Config { Width = 541 };
             var beatMap = ManiaMap();
             // judgement 1 == "FFD237"
             beatMap.Notes.Add(new Note(timeStamp: 2000, column: 2, duration: 0, judgementStart: 1));
@@ -41,7 +42,7 @@ public class RendererTests
             {
                 var result = renderer.Start();
 
-                Assert.Equal(540, result.GameWidth);
+                Assert.Equal(541, result.GameWidth);
                 Assert.Equal(3960, result.WindowSize);
                 Assert.Equal(2, result.WindowCount); // ceil((6000 - 960) / 3000)
                 Assert.Equal(2, result.ImageCount);
@@ -51,12 +52,12 @@ public class RendererTests
             }
 
             using var slice = new Bitmap(Path.Combine(temp, "v_0.png"));
-            Assert.Equal(540, slice.Width);
+            Assert.Equal(541, slice.Width);
             Assert.Equal(3960, slice.Height);
 
             // Background is opaque black everywhere it is not painted.
             Assert.Equal(Black, slice.GetPixel(5, 5).ToArgb());
-            Assert.Equal(Black, slice.GetPixel(539, 3959).ToArgb());
+            Assert.Equal(Black, slice.GetPixel(540, 3959).ToArgb());
 
             // Window 0 bottom is heightToTime(3960) = 3300 ms, so the note lands at y = (3300-2000)*1.2 = 1560.
             // Base note: x = 2*135 = 270, inset by columnWidth*0.1 -> 283.5 .. 391.5, outline only.

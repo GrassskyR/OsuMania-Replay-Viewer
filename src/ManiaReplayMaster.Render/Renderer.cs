@@ -66,6 +66,7 @@ public sealed class Renderer : IDisposable
     private readonly int _windowSize;
 
     private readonly Bitmap _bufferedImage;
+    private readonly RgbPngWriter _pngWriter;
     private readonly Dictionary<int, SolidBrush> _brushes = new();
     private readonly Dictionary<(int Color, int Stroke), Pen> _pens = new();
     private Font? _timestampFont;
@@ -91,6 +92,7 @@ public sealed class Renderer : IDisposable
 
         // Every slice is cleared to opaque black; an alpha channel only adds PNG work.
         _bufferedImage = new Bitmap(_gameWidth, _windowSize, PixelFormat.Format24bppRgb);
+        _pngWriter = new RgbPngWriter(_gameWidth);
     }
 
     /// <summary>Scroll step between two windows, i.e. one window's worth of pixels.</summary>
@@ -281,7 +283,7 @@ public sealed class Renderer : IDisposable
             Directory.CreateDirectory(directory);
         }
 
-        _bufferedImage.Save(path, ImageFormat.Png);
+        _pngWriter.Write(_bufferedImage, path);
     }
 
     // ---------------------------------------------------------------- drawing primitives
@@ -626,6 +628,7 @@ public sealed class Renderer : IDisposable
         foreach (var pen in _pens.Values) pen.Dispose();
         foreach (var brush in _brushes.Values) brush.Dispose();
         _timestampFont?.Dispose();
+        _pngWriter.Dispose();
         _bufferedImage.Dispose();
     }
 }
