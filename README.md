@@ -91,6 +91,19 @@ NuGet 默认从 nuget.org 恢复，依赖包不纳入源码管理。离线环境
 
 `memory32` 自动发布自包含 x86 测试进程，无需另装 x86 .NET。GUI 与真实游戏检查按需手动运行；截图写入 `out/appcheck/`。GitHub Actions 在 Windows 上执行构建、单元测试、合成内存检查、FFmpeg 测试和自包含发布，并保留构建产物。
 
+### 发布 GitHub Release
+
+推送 `v*` 标签会触发 **Windows release** 工作流，在 Windows 上通过构建、单元测试、合成内存检查和视频导出测试后，自动创建 GitHub Release 并生成发布说明：
+
+```powershell
+git tag v3.0.0
+git push origin v3.0.0
+```
+
+Release 包含 `ManiaReplayViewer-win-x64.zip`（自包含目录版）和 `ManiaReplayViewer-win-x64-single.zip`（单文件应用版），均附带 FFmpeg 和许可证。包含 `-` 的标签（例如 `v3.0.0-rc.1`）会标记为预发布。
+
+也可在 GitHub 的 **Actions → Windows release → Run workflow** 中填写已有标签手动发布；工作流始终检出该标签对应的源码。使用仓库自动提供的 `GITHUB_TOKEN` 发布，无需配置额外密钥。
+
 ## 项目结构
 
 | 目录 | 内容 |

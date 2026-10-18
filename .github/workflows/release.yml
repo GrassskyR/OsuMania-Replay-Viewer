@@ -1,0 +1,81 @@
+name: Windows release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release (for example, v3.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Cache release FFmpeg archive
+        uses: actions/cache@v4
+        with:
+          path: out/dependencies/ffmpeg/
+          key: ffmpeg-win-x64-${{ hashFiles('tools/package-ffmpeg.ps1') }}
+      - name: Build
+        run: ./build.ps1 build
+      - name: Unit and reference tests
+        run: ./build.ps1 test -- --no-build --no-restore
+      - name: Synthetic x86 memory checks
+        run: ./build.ps1 gamecheck -- memory32
+      - name: Install FFmpeg
+        run: choco install ffmpeg --yes --no-progress
+      - name: Publish self-contained application
+        run: ./build.ps1 publish
+      - name: Export and frame cadence tests
+        run: |
+          $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
+          $env:MRM_FFMPEG = "$PWD/artifacts/win-x64/ffmpeg.exe"
+          ./build.ps1 e2e -- --no-build --no-restore
+      - name: Package self-contained application
+        run: Compress-Archive -Path artifacts/win-x64/* -DestinationPath artifacts/ManiaReplayViewer-win-x64.zip -Force
+      - name: Publish single executable
+        run: ./build.ps1 publish-single
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ManiaReplayViewer-windows-release
+          path: |
+            artifacts/ManiaReplayViewer-win-x64.zip
+            artifacts/ManiaReplayViewer-win-x64-single.zip
+          if-no-files-found: error
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/ManiaReplayViewer-win-x64.zip
+            artifacts/ManiaReplayViewer-win-x64-single.zip
