@@ -28,7 +28,9 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         _height = config.Height;
         _framePerSecond = config.FramePerSecond;
         _codec = config.Codec;
-        _codecPreset = config.CodecPreset;
+        PresetChoices = GetPresetChoices(_codec, config.CodecPreset);
+        _codecPreset = CanSelectPreset && PresetChoices.Contains(config.CodecPreset) ? config.CodecPreset : "auto";
+        config.CodecPreset = _codecPreset;
         _outputDir = config.OutputDir;
         _debugLogging = config.Debug;
 
@@ -185,6 +187,26 @@ internal sealed class MainViewModel : INotifyPropertyChanged
 
     public IReadOnlyList<string> CodecChoices { get; } = new[] { "auto", "libx264", "h264_nvenc", "h264_qsv", "h264_amf" };
 
+    public IReadOnlyList<string> PresetChoices { get; private set; } = ["auto"];
+
+    private static IReadOnlyList<string> GetPresetChoices(string codec, string savedPreset = "auto")
+    {
+        string[] presets = codec switch
+        {
+            "libx264" => ["auto", "ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo"],
+            "h264_nvenc" => ["auto", "p1", "p2", "p3", "p4", "p5", "p6", "p7"],
+            "h264_qsv" => ["auto", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"],
+            "h264_amf" => ["auto", "speed", "balanced", "quality", "high_quality"],
+            _ => ["auto"]
+        };
+        // Retain valid older NVENC aliases and presets belonging to custom encoders.
+        var legacyAlias = codec == "h264_nvenc" && savedPreset is "fast" or "medium" or "slow";
+        var customCodec = codec is not ("auto" or "libx264" or "h264_nvenc" or "h264_qsv" or "h264_amf");
+        return !presets.Contains(savedPreset) && (legacyAlias || customCodec) ? [.. presets, savedPreset] : presets;
+    }
+
+    public bool CanSelectPreset => !string.Equals(Codec, "auto", StringComparison.OrdinalIgnoreCase);
+
     private string _codec = "auto";
     public string Codec
     {
@@ -194,7 +216,11 @@ internal sealed class MainViewModel : INotifyPropertyChanged
             if (Set(ref _codec, value))
             {
                 Core.Model.Config.Instance.Codec = value;
+                PresetChoices = GetPresetChoices(value);
+                OnPropertyChanged(nameof(PresetChoices));
+                OnPropertyChanged(nameof(CanSelectPreset));
                 CodecPreset = "auto";
+                OnPropertyChanged(nameof(CodecPreset));
                 UiSettings.Current.RememberRendering(Core.Model.Config.Instance);
             }
         }
@@ -206,7 +232,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         get => _codecPreset;
         set
         {
-            if (Set(ref _codecPreset, value))
+            if (!string.IsNullOrWhiteSpace(value) && Set(ref _codecPreset, value))
             {
                 Core.Model.Config.Instance.CodecPreset = value;
                 UiSettings.Current.RememberRendering(Core.Model.Config.Instance);

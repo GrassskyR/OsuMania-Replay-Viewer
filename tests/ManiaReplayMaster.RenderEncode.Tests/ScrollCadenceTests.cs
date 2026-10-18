@@ -11,9 +11,9 @@ namespace ManiaReplayMaster.RenderEncode.Tests;
 public sealed class ScrollCadenceTests
 {
     [Theory]
-    [InlineData("libx264")]
-    [InlineData("auto")]
-    public void CopiedSlicesPreserveEveryFrameAndScrollAcrossMergeBoundaries(string codec)
+    [InlineData("libx264", 59)]
+    [InlineData("auto", 60)]
+    public void CopiedSlicesPreserveEveryFrameAndScrollAcrossMergeBoundaries(string codec, int fps)
     {
         var (ffmpeg, _) = FfmpegProbe.Resolve();
         var directory = Path.Combine(RepoPaths.CreateTempDirectory(), "渲染 it's fine");
@@ -38,7 +38,7 @@ public sealed class ScrollCadenceTests
             var encoder = new EncodeEncoder(new BeatMap { Duration = 2500, BgmPath = BeatMap.MuteMusic },
                 Enumerable.Range(0, imageCount).Select(index => Path.Combine(directory, $"strip_{index}.png")).ToArray(),
                 video, 1, 0, framesPerImage, ffmpeg, width,
-                new Config { Codec = codec, Height = height, Speed = speed, FfmpegMaxProcessingSize = 2 });
+                new Config { Codec = codec, FramePerSecond = fps, Height = height, Speed = speed, FfmpegMaxProcessingSize = 2 });
             encoder.GenerateVideo();
 
             var decoded = Path.Combine(directory, "frames.gray");

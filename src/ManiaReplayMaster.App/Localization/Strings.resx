@@ -26,7 +26,7 @@
   <data name="FPS" xml:space="preserve"><value>FPS</value></data>
   <data name="Codec" xml:space="preserve"><value>Codec</value></data>
   <data name="Codec.Tooltip" xml:space="preserve"><value>auto tests NVIDIA NVENC, Intel QSV and AMD AMF, then falls back to CPU. libx264 forces CPU encoding. Your choice is saved.</value></data>
-  <data name="Preset.Tooltip" xml:space="preserve"><value>auto chooses a fast preset for the selected encoder. When codec is auto, both encoder and preset are selected automatically.</value></data>
+  <data name="Preset.Tooltip" xml:space="preserve"><value>Choose a preset for the selected encoder, ordered from fastest to slowest. auto selects a fast preset. When codec is auto, the preset is also selected automatically.</value></data>
   <data name="Log.EncoderSelected" xml:space="preserve"><value>Video encoder: {0}, preset: {1}.</value></data>
   <data name="Log.EncoderFallback" xml:space="preserve"><value>GPU encoding is unavailable or failed; using CPU (libx264 / ultrafast).</value></data>
   <data name="Preset" xml:space="preserve"><value>Preset</value></data>

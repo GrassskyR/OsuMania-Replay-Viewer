@@ -104,16 +104,16 @@ public static class FfmpegCommandBuilder
             // Rendered strips are opaque and cover the entire viewport. Moving a crop over
             // them produces the same frames without generating and blending a black canvas.
             // Keep 4:4:4 until after cropping so odd scroll speeds retain exact chroma positions.
+            // Decode and convert each static PNG once, then repeat the cached frame. The input
+            // time base is 1/FPS, so integer PTS avoids fractional rounding at unusual frame rates.
             filterGraph.Add(FormattableString.Invariant(
-                $"[{inputFileIndex}]format=yuv444p,fps={request.FramePerSecond},crop=w={request.GameWidth}:h={request.GameHeight}:x=0:y=ih-oh-{scroll}:exact=1[video{i}l]"));
+                $"[{inputFileIndex}]format=yuv444p,loop=loop=-1:size=1:start=0,setpts=N,crop=w={request.GameWidth}:h={request.GameHeight}:x=0:y=ih-oh-{scroll}:exact=1[video{i}l]"));
             filterGraph.Add(
                 $"[video{i}l]trim=end={JavaDouble.ToString(request.SliceDuration)}{isTaikoSuffix}[video{i}]");
 
             outVideos.Add($"[video{i}]");
-            subcommands.Add("-r");
-            subcommands.Add("1");
-            subcommands.Add("-loop");
-            subcommands.Add("1");
+            subcommands.Add("-framerate");
+            subcommands.Add(request.FramePerSecond.ToString(System.Globalization.CultureInfo.InvariantCulture));
             subcommands.Add("-i");
             subcommands.Add(request.ImagePaths[i]);
         }

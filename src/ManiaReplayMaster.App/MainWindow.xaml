@@ -135,9 +135,10 @@
                   IsEditable="True" ItemsSource="{Binding CodecChoices}" ToolTip="{loc:Text Codec.Tooltip}"
                   Text="{Binding Codec, UpdateSourceTrigger=PropertyChanged}" />
         <TextBlock Grid.Row="1" Grid.Column="5" Text="{loc:Text Preset}" Style="{StaticResource Label}" Margin="0,6,8,0" />
-        <TextBox x:Name="PresetBox" Grid.Row="1" Grid.Column="6" Width="90" Margin="0,6,0,0"
-                 ToolTip="{loc:Text Preset.Tooltip}"
-                 Text="{Binding CodecPreset, UpdateSourceTrigger=PropertyChanged}" />
+        <ComboBox x:Name="PresetBox" Grid.Row="1" Grid.Column="6" Width="140" Margin="0,6,0,0"
+                  ItemsSource="{Binding PresetChoices}" IsEnabled="{Binding CanSelectPreset}"
+                  ToolTip="{loc:Text Preset.Tooltip}" ToolTipService.ShowOnDisabled="True"
+                  SelectedItem="{Binding CodecPreset}" />
 
         <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Text Output}" Style="{StaticResource Label}" Margin="0,6,8,0" />
         <TextBox x:Name="OutputBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" Margin="0,6,10,0" Text="{Binding OutputDir}" />

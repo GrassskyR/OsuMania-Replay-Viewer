@@ -26,7 +26,7 @@
   <data name="FPS" xml:space="preserve"><value>帧率</value></data>
   <data name="Codec" xml:space="preserve"><value>编码器</value></data>
   <data name="Codec.Tooltip" xml:space="preserve"><value>auto 实际试编码检测 NVIDIA NVENC、Intel QSV 和 AMD AMF，不可用时回退 CPU。libx264 强制使用 CPU。选择会自动保存。</value></data>
-  <data name="Preset.Tooltip" xml:space="preserve"><value>auto 根据编码器选择快速预设。编码器为 auto 时，编码器与预设均自动选择。</value></data>
+  <data name="Preset.Tooltip" xml:space="preserve"><value>展开选择当前编码器的预设，列表从快到慢排列。auto 自动选择快速预设；编码器为 auto 时，预设也由程序自动选择。</value></data>
   <data name="Log.EncoderSelected" xml:space="preserve"><value>视频编码器：{0}，预设：{1}。</value></data>
   <data name="Log.EncoderFallback" xml:space="preserve"><value>GPU 编码不可用或失败，已回退 CPU（libx264 / ultrafast）。</value></data>
   <data name="Preset" xml:space="preserve"><value>编码预设</value></data>
