@@ -32,9 +32,6 @@ public abstract class BaseJudger : IJudger
     protected readonly ReplayModel ReplayModel;
     protected readonly double[] JudgementWindow;
 
-    /// <summary>Exposed for diagnostics/benchmarking (the original kept this internal).</summary>
-    public double[] JudgementWindowValues => JudgementWindow;
-
     private readonly LinkedList<Note> _notesToJudge;
     private readonly HashSet<Note> _cannotJudge = new(ReferenceEqualityComparer.Instance);
 
@@ -214,14 +211,4 @@ public abstract class BaseJudger : IJudger
             .Select(kv => kv.Value)
             .ToList();
     }
-}
-
-/// <summary>Reference (identity) equality, matching Java's default <c>Object.hashCode/equals</c>.</summary>
-internal sealed class ReferenceEqualityComparer : IEqualityComparer<Note>
-{
-    public static readonly ReferenceEqualityComparer Instance = new();
-
-    public bool Equals(Note? x, Note? y) => ReferenceEquals(x, y);
-
-    public int GetHashCode(Note obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
 }

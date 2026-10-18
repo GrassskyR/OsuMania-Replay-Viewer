@@ -13,10 +13,10 @@ public interface IReplayReader
 
     string ReadBeatMapMd5(string replayPath);
 
-    ReplayModel ReadReplay(string path, BeatMap beatMap);
+    ReplayModel ReadReplay(string path, BeatMap beatMap, Config? config = null);
 
     /// <summary>Creates the judger appropriate for this replay format + beatmap type.</summary>
-    IJudger GetJudger(BeatMap beatMap, ReplayModel replayModel);
+    IJudger GetJudger(BeatMap beatMap, ReplayModel replayModel, Config? config = null);
 }
 
 public static class ReplayReaderRegistry

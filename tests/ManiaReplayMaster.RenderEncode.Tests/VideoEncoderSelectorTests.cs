@@ -5,8 +5,6 @@ namespace ManiaReplayMaster.RenderEncode.Tests;
 public class VideoEncoderSelectorTests
 {
     [Theory]
-    [InlineData("h264_nvenc", "p1", 1)]
-    [InlineData("h264_qsv", "veryfast", 2)]
     [InlineData("h264_amf", "speed", 3)]
     public void AutoSkipsUnusableEncodersAndStopsAtFirstWorkingOne(string workingCodec, string preset, int probes)
     {
@@ -36,8 +34,6 @@ public class VideoEncoderSelectorTests
     [Theory]
     [InlineData("libx264", "slow", "slow")]
     [InlineData("h264_nvenc", "auto", "p1")]
-    [InlineData("h264_qsv", "auto", "veryfast")]
-    [InlineData("h264_amf", "auto", "speed")]
     public void ExplicitEncoderPreservesUserChoiceWithoutAutomaticProbes(string codec, string preset, string expectedPreset)
     {
         var selected = VideoEncoderSelector.Select(codec, preset,

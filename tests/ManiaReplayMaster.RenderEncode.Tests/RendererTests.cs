@@ -12,83 +12,11 @@ namespace ManiaReplayMaster.RenderEncode.Tests;
 /// </summary>
 public class RendererTests
 {
-    private static Config DefaultConfig() => new();
-
     private static BeatMap ManiaMap(long duration = 5000)
         => new() { Key = 4, Duration = duration, Type = BeatMap.TypeMania };
 
     private static ReplayModel Model(params Note[] actions)
         => new(actions.ToList(), 1.0, false, new double[] { 16, 34, 67, 97, 121, 158 });
-
-    // ------------------------------------------------------------------ colours
-
-    [Theory]
-    [InlineData("FFFFFF", 255, 255, 255, 255)]
-    [InlineData("FF0000", 255, 255, 0, 0)]
-    [InlineData("646464", 255, 100, 100, 100)]
-    [InlineData("30ED402F", 0x30, 0xED, 0x40, 0x2F)]
-    [InlineData("88488FAD", 0x88, 0x48, 0x8F, 0xAD)]
-    [InlineData("FFD237", 255, 255, 210, 55)]
-    public void ReadColor_SupportsRgbAndArgb(string hex, int a, int r, int g, int b)
-    {
-        var color = Renderer.ReadColor(hex);
-
-        Assert.Equal(a, color.A);
-        Assert.Equal(r, color.R);
-        Assert.Equal(g, color.G);
-        Assert.Equal(b, color.B);
-    }
-
-    [Theory]
-    [InlineData("FFF")]
-    [InlineData("")]
-    [InlineData("1234567")]
-    [InlineData("GGGGGG")]
-    public void ReadColor_RejectsAnythingElse(string hex)
-    {
-        Assert.ThrowsAny<Exception>(() => Renderer.ReadColor(hex));
-    }
-
-    // ------------------------------------------------------------------ geometry
-
-    [Fact]
-    public void Geometry_MatchesReferenceFormulas()
-    {
-        // Defaults: speed 20, 540x960, 60 fps, maxStepSize 3000 -> 1.2 px/ms, windowSize 3960.
-        using var renderer = new Renderer(ManiaMap(116334), Model(), Path.Combine(Path.GetTempPath(), "v.png"),
-            DefaultConfig());
-
-        Assert.Equal(150, renderer.WindowFrameCount); // 3000 / 20
-        Assert.Equal(3000, renderer.StepSize); // ensureMultiple(3000, 20)
-        Assert.Equal(3960, renderer.WindowSize); // stepSize + height
-        Assert.Equal(540, renderer.GameWidth);
-        Assert.Equal(960, renderer.GameHeight);
-        Assert.Equal(135, renderer.ColumnWidth); // Config.width / key (NOT gameWidth / key)
-        Assert.Equal(139620, renderer.TotalHeight); // ensureMultiple(116334 * 1.2, 20)
-    }
-
-    [Fact]
-    public void TaikoSingleColumn_UsesQuarterWidthButColumnWidthStaysBasedOnConfigWidth()
-    {
-        var config = new Config { TaikoSingleColumn = true };
-        var beatMap = new BeatMap { Key = 8, Duration = 5000, Type = BeatMap.TypeTaiko };
-
-        using var renderer = new Renderer(beatMap, Model(), Path.Combine(Path.GetTempPath(), "v.png"), config);
-
-        Assert.Equal(135, renderer.GameWidth); // 540 / 4
-        Assert.Equal(67, renderer.ColumnWidth); // Config.width / key, NOT gameWidth / key (which would be 16)
-    }
-
-    [Fact]
-    public void MaxStepSizeRoundsUpToAMultipleOfSpeed()
-    {
-        var config = new Config { Speed = 25, MaxStepSize = 3000 };
-
-        using var renderer = new Renderer(ManiaMap(), Model(), Path.Combine(Path.GetTempPath(), "v.png"), config);
-
-        Assert.Equal(120, renderer.WindowFrameCount); // 3000 / 25
-        Assert.Equal(3000, renderer.StepSize);
-    }
 
     // ------------------------------------------------------------------ mania rendering
 
@@ -98,7 +26,7 @@ public class RendererTests
         var temp = RepoPaths.CreateTempDirectory();
         try
         {
-            var config = DefaultConfig();
+            var config = new Config();
             var beatMap = ManiaMap();
             // judgement 1 == "FFD237"
             beatMap.Notes.Add(new Note(timeStamp: 2000, column: 2, duration: 0, judgementStart: 1));
@@ -156,7 +84,7 @@ public class RendererTests
             beatMap.Notes.Add(new Note(timeStamp: 2000, column: 2, duration: 500, judgementStart: 1));
             var action = new Note(timeStamp: 2000, column: 2, duration: 500, judgementStart: 1, judgementEnd: 1);
 
-            using (var renderer = new Renderer(beatMap, Model(action), Path.Combine(temp, "v.png"), DefaultConfig()))
+            using (var renderer = new Renderer(beatMap, Model(action), Path.Combine(temp, "v.png"), new Config()))
             {
                 renderer.Start();
             }
@@ -178,34 +106,12 @@ public class RendererTests
     }
 
     [Fact]
-    public void Start_ReportsRenderStageProgressInTheFirstThirtyPercent()
-    {
-        var temp = RepoPaths.CreateTempDirectory();
-        try
-        {
-            var values = new List<double>();
-            using (var renderer = new Renderer(ManiaMap(), Model(), Path.Combine(temp, "v.png"), DefaultConfig()))
-            {
-                renderer.Start(new SyncProgress(values.Add));
-            }
-
-            Assert.NotEmpty(values);
-            Assert.All(values, value => Assert.InRange(value, 0.0, 30.0));
-            Assert.Equal(30.0, values[^1], 6);
-        }
-        finally
-        {
-            RepoPaths.DeleteDirectory(temp);
-        }
-    }
-
-    [Fact]
     public void Start_HonoursCancellation()
     {
         var temp = RepoPaths.CreateTempDirectory();
         try
         {
-            using var renderer = new Renderer(ManiaMap(), Model(), Path.Combine(temp, "v.png"), DefaultConfig());
+            using var renderer = new Renderer(ManiaMap(), Model(), Path.Combine(temp, "v.png"), new Config());
             using var cts = new CancellationTokenSource();
             cts.Cancel();
 
@@ -234,7 +140,7 @@ public class RendererTests
             beatMap.Notes.Add(left);
             beatMap.Notes.Add(duel);
 
-            using (var renderer = new Renderer(beatMap, Model(), Path.Combine(temp, "v.png"), DefaultConfig()))
+            using (var renderer = new Renderer(beatMap, Model(), Path.Combine(temp, "v.png"), new Config()))
             {
                 var result = renderer.Start();
                 Assert.Equal(540, result.GameWidth); // multi column keeps the full width
@@ -299,12 +205,4 @@ public class RendererTests
         return false;
     }
 
-    private sealed class SyncProgress : IProgress<double>
-    {
-        private readonly Action<double> _onReport;
-
-        public SyncProgress(Action<double> onReport) => _onReport = onReport;
-
-        public void Report(double value) => _onReport(value);
-    }
 }

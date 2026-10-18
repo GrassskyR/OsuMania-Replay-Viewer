@@ -46,6 +46,7 @@ public static class FfmpegRunner
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        log.Debug($"{ffmpegPath} {string.Join(" ", arguments)}");
         var startInfo = new ProcessStartInfo
         {
             FileName = ffmpegPath,

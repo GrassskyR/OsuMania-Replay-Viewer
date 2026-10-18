@@ -215,9 +215,9 @@ public static class OsuReplayHeaderReader
         using var reader = ManiaReplayMaster.Core.IO.OsuBinaryReader.OpenFile(path);
         var mode = (GameMode)reader.ReadByte();
         var version = reader.ReadInt32();
-        var beatmapHash = reader.ReadHeaderString();
-        var username = reader.ReadHeaderString();
-        var replayHash = reader.ReadHeaderString();
+        var beatmapHash = reader.ReadLine();
+        var username = reader.ReadLine();
+        var replayHash = reader.ReadLine();
         var count300 = reader.ReadUInt16();
         var count100 = reader.ReadUInt16();
         var count50 = reader.ReadUInt16();
@@ -228,7 +228,7 @@ public static class OsuReplayHeaderReader
         var maxCombo = reader.ReadUInt16();
         var perfect = reader.ReadBoolean();
         var mods = reader.ReadInt32();
-        var diagram = reader.ReadHeaderString();
+        var diagram = reader.ReadLine();
         var timestamp = reader.ReadInt64();
         var payloadLength = reader.ReadInt32();
         var headerLength = reader.Position;

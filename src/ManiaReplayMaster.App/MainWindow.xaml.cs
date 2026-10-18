@@ -17,7 +17,6 @@ public partial class MainWindow : Window
     private readonly MainViewModel _vm = new();
     private readonly DispatcherTimer _detectTimer;
     private CancellationTokenSource? _cts;
-    private DateTime _startedAt;
     private IReadOnlyList<CandidateItem>? _lastDetectedCandidates;
     private bool _updatingCandidates;
 
@@ -41,7 +40,7 @@ public partial class MainWindow : Window
         _detectTimer.Start();
     }
 
-    private void OnDetectTick(object? sender, EventArgs e)
+    private async void OnDetectTick(object? sender, EventArgs e)
     {
         try
         {
@@ -56,7 +55,7 @@ public partial class MainWindow : Window
                 if (_vm.AutoStartRender && _vm.CanRender)
                 {
                     _vm.Log(Text("Log.AutoStart"));
-                    StartRender(judgeOnly: false);
+                    await StartRenderAsync(judgeOnly: false);
                 }
             }
         }
@@ -260,9 +259,9 @@ public partial class MainWindow : Window
 
     // ---------------------------------------------------------------- actions
 
-    private void OnRender(object sender, RoutedEventArgs e) => StartRender(judgeOnly: false);
+    private async void OnRender(object sender, RoutedEventArgs e) => await StartRenderAsync(judgeOnly: false);
 
-    private void OnJudgeOnly(object sender, RoutedEventArgs e) => StartRender(judgeOnly: true);
+    private async void OnJudgeOnly(object sender, RoutedEventArgs e) => await StartRenderAsync(judgeOnly: true);
 
     private void OnCancel(object sender, RoutedEventArgs e)
     {
@@ -275,7 +274,7 @@ public partial class MainWindow : Window
         _cts.Cancel();
     }
 
-    private void StartRender(bool judgeOnly)
+    private async Task StartRenderAsync(bool judgeOnly)
     {
         if (!_vm.CanRender)
         {
@@ -286,81 +285,68 @@ public partial class MainWindow : Window
         var replay = _vm.ReplayPath;
         var beatmap = _vm.BeatmapPath;
         var config = Config.Instance.Clone();
-        var outputDir = Path.GetFullPath(config.OutputDir);
-        Directory.CreateDirectory(outputDir);
-
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
+        using var cancellation = new CancellationTokenSource();
+        _cts = cancellation;
+        var token = cancellation.Token;
         _vm.IsBusy = true;
         _vm.Progress = 0;
         _vm.SetResultText(() => string.Empty);
-        _startedAt = DateTime.Now;
+        var startedAt = DateTime.Now;
         _vm.SetProgressText(() => Text("Progress.Starting"));
         _vm.Log(Text(judgeOnly ? "Log.Judging" : "Log.Rendering", Path.GetFileName(replay)));
 
         var progress = new Progress<EncodeProgress>(p =>
         {
+            if (_cts != cancellation) return;
             _vm.Progress = Math.Clamp(p.Percentage, 0, 100);
-            _vm.SetProgressText(() => Describe(p.Percentage, _startedAt));
+            _vm.SetProgressText(() => Describe(p.Percentage, startedAt));
+        });
+        IProgress<EncoderSelection> encoderProgress = new Progress<EncoderSelection>(selection =>
+        {
+            if (_cts != cancellation) return;
+            if (selection.IsFallback) _vm.Log(Text("Log.EncoderFallback"));
+            _vm.Log(Text("Log.EncoderSelected", selection.Codec, selection.Preset));
         });
 
-        Task.Run(() =>
+        try
         {
-            try
+            var summary = await Task.Run(() =>
             {
                 if (judgeOnly)
                 {
-                    RunJudgeOnly(beatmap, replay, config);
+                    return RunJudgeOnly(beatmap, replay, config);
                 }
-                else
-                {
-                    var result = ManiaReplayMaster.Render.RenderExporter.Run(
-                        beatmap, replay,
-                        tempDirectory: null,
-                        config: config,
-                        progress: progress,
-                        ffmpegPath: null,
-                        log: null,
-                        cancellationToken: token,
-                        encoderSelected: selection => Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            if (selection.IsFallback) _vm.Log(Text("Log.EncoderFallback"));
-                            _vm.Log(Text("Log.EncoderSelected", selection.Codec, selection.Preset));
-                        })));
 
-                    ReportSuccess(result.VideoPath, result.BeatMap, result.ReplayModel);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Report(() => Text("Log.Cancelled"), null);
-            }
-            catch (Exception ex)
-            {
-                Report(() => Text("Log.Failed", ex.Message), ex);
-            }
-        }, token);
-    }
-
-    private void RunJudgeOnly(string beatmapPath, string replayPath, Config config)
-    {
-        var previous = Config.Instance;
-        Config.Instance = config;
-        try
+                var result = ManiaReplayMaster.Render.RenderExporter.Run(
+                    beatmap, replay, config: config, progress: progress,
+                    cancellationToken: token, encoderSelected: encoderProgress.Report);
+                return BuildVideoSummary(result.VideoPath, result.BeatMap, result.ReplayModel);
+            }, token);
+            token.ThrowIfCancellationRequested();
+            Report(summary, completed: true);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            var preparation = PipelineRunner.Prepare(beatmapPath, replayPath);
-            var beatMap = preparation.BeatMap;
-            var replay = preparation.ReplayModel;
-            var counts = preparation.Judger is Core.Judger.BaseJudger baseJudger
-                ? baseJudger.JudgementFromJudging
-                : new List<int>();
-
-            Report(() => BuildSummary(beatMap, replay, counts), null);
+            Report(() => Text("Log.Cancelled"), completed: false);
+        }
+        catch (Exception ex)
+        {
+            Report(() => Text("Log.Failed", ex.Message), completed: false, error: ex);
         }
         finally
         {
-            Config.Instance = previous;
+            _cts = null;
+            _vm.IsBusy = false;
         }
+    }
+
+    private static Func<string> RunJudgeOnly(string beatmapPath, string replayPath, Config config)
+    {
+        var preparation = PipelineRunner.Prepare(beatmapPath, replayPath, config: config);
+        var counts = preparation.Judger is Core.Judger.BaseJudger baseJudger
+            ? baseJudger.JudgementFromJudging
+            : new List<int>();
+        return () => BuildSummary(preparation.BeatMap, preparation.ReplayModel, counts);
     }
 
     private static string BuildSummary(BeatMap beatMap, ReplayModel replay, IReadOnlyList<int> counts)
@@ -380,7 +366,7 @@ public partial class MainWindow : Window
         return string.Join(Environment.NewLine, lines);
     }
 
-    private void ReportSuccess(string videoPath, BeatMap beatMap, ReplayModel replay)
+    private static Func<string> BuildVideoSummary(string videoPath, BeatMap beatMap, ReplayModel replay)
     {
         var counts = beatMap.Notes
             .GroupBy(n => n.JudgementStart)
@@ -389,33 +375,24 @@ public partial class MainWindow : Window
         var judgementCounts = string.Join(" ", counts);
         var accuracy = replay.Acc * 100;
         var noteCount = beatMap.Notes.Count;
-        Report(() => Text("Summary.Video", Path.GetFileName(videoPath), accuracy, noteCount, judgementCounts), null);
+        return () => Text("Summary.Video", Path.GetFileName(videoPath), accuracy, noteCount, judgementCounts);
     }
 
-    private void Report(Func<string> describe, Exception? error)
+    private void Report(Func<string> describe, bool completed, Exception? error = null)
     {
-        Dispatcher.Invoke(() =>
+        _vm.SetResultText(() => describe().Split('\n')[0]);
+        if (completed)
         {
-            _vm.IsBusy = false;
-            _cts?.Dispose();
-            _cts = null;
-            _vm.SetResultText(() => describe().Split('\n')[0]);
-            if (error is null)
-            {
-                _vm.Progress = 100;
-                _vm.SetProgressText(() => Text("Progress.Done"));
-            }
-            else
-            {
-                _vm.SetProgressText(() => Text("Progress.Stopped"));
-            }
+            _vm.Progress = 100;
+            _vm.SetProgressText(() => Text("Progress.Done"));
+        }
+        else
+        {
+            _vm.SetProgressText(() => Text("Progress.Stopped"));
+        }
 
-            _vm.Log(describe());
-            if (error is not null)
-            {
-                _vm.Log(error.ToString());
-            }
-        });
+        _vm.Log(describe());
+        if (error is not null) _vm.Log(error.ToString());
     }
 
     private static string Describe(double percent, DateTime startedAt)

@@ -15,15 +15,10 @@ public sealed class ProgressReporter
         _sink = sink;
     }
 
-    public string LastStage { get; private set; } = string.Empty;
-
-    public double LastPercentage => _preProgress;
-
     public void Report(string stage, int startProgress, int endProgress, double interProgress)
     {
         var progress = ProgressModel.Combine(startProgress, endProgress, interProgress);
         _preProgress = Math.Max(_preProgress, progress);
-        LastStage = stage;
         _sink?.Report(new EncodeProgress(stage, _preProgress));
     }
 }

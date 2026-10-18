@@ -745,9 +745,6 @@ public sealed class BeatmapLocator
             return _songsByMd5.TryGetValue(md5, out var list) ? list.ToList() : Array.Empty<string>();
         }
     }
-
-    /// <summary>Incremental variant used by the UI: rehash only the files whose size/mtime moved.</summary>
-    public SongsScanResult RefreshSongs(bool force = false) => ScanSongs(force);
 }
 
 /// <summary>Counters of a <c>Songs</c> walk, for the "why is this slow" question.</summary>

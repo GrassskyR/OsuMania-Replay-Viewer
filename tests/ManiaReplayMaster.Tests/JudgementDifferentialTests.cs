@@ -76,7 +76,7 @@ public sealed class JudgementDifferentialTests
     public void Judgement_matches_reference_implementation(string goldenName, string beatmapFile, string replayFile)
     {
         var golden = RepoPaths.LoadJson<Golden>(RepoPaths.GoldenFile(goldenName));
-        var actual = Pipeline.Build(RepoPaths.Fixture(beatmapFile), RepoPaths.Fixture(replayFile));
+        var actual = PipelineSnapshot.Create(Pipeline.Prepare(RepoPaths.Fixture(beatmapFile), RepoPaths.Fixture(replayFile)));
 
         Assert.Equal(golden.GameMode, actual.GameMode);
         Assert.Equal(golden.Type, actual.Mode);

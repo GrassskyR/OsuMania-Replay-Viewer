@@ -5,6 +5,7 @@ using ManiaReplayMaster.Core.Beatmap;
 using ManiaReplayMaster.Core.Judger;
 using ManiaReplayMaster.Core.Model;
 using ManiaReplayMaster.Core.Replay;
+using ManiaReplayMaster.Core.Pipeline;
 using PipelineRunner = ManiaReplayMaster.Core.Pipeline.Pipeline;
 
 namespace ManiaReplayMaster.Cli;
@@ -204,7 +205,7 @@ public static class Program
         var replayPath = args[1];
         var outPath = GetOption(args, "--out");
 
-        var snapshot = PipelineRunner.Build(beatmapPath, replayPath, outPath is null);
+        var snapshot = PipelineSnapshot.Create(PipelineRunner.Prepare(beatmapPath, replayPath));
         var json = JsonSerializer.Serialize(snapshot, JsonOptions);
         if (outPath is not null)
         {
@@ -252,7 +253,7 @@ public static class Program
             var outPath = Path.Combine(outDir, name);
             try
             {
-                var snapshot = PipelineRunner.Build(map, replay, quiet: true);
+                var snapshot = PipelineSnapshot.Create(PipelineRunner.Prepare(map, replay));
                 File.WriteAllText(outPath, JsonSerializer.Serialize(snapshot, JsonOptions));
                 produced++;
                 Console.WriteLine($"ok  {name}  notes={snapshot.Notes.Count} acc={snapshot.Acc:R}");

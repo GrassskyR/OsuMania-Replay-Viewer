@@ -59,7 +59,7 @@ public sealed class ReplayMatchWeights
 }
 
 /// <summary>
-/// Resolves "which score / which replay file" for a beatmap, implementing the four-level strategy of
+/// Resolves "which score / which replay file" for a beatmap, implementing the matching strategy of
 /// plan 鎼?.3:
 ///
 /// <list type="number">
@@ -70,7 +70,6 @@ public sealed class ReplayMatchWeights
 /// <item><b>Full header scan + weighted scoring</b> —every <c>.osr</c> under <c>Data\r</c> and
 /// <c>Replays\</c> (10,215 files on the reference machine) is indexed header-only, in parallel, with a
 /// size+mtime-invalidated cache so repeat runs are cheap.</item>
-/// <item><b>In-memory dump</b> —a stub; see <see cref="InMemoryReplayDump"/>.</item>
 /// </list>
 ///
 /// The beatmap MD5 is a hard filter: candidates whose header disagrees on the beatmap are never
@@ -153,8 +152,8 @@ public sealed class ReplayResolver
         foreach (var score in scores)
         {
             var fileName = score.ReplayFileName;
-            var path = CombineReplayPath(fileName);
-            var exists = path is not null && File.Exists(path);
+            var path = Locator.ResolveReplayFile(fileName);
+            var exists = path is not null;
 
             // The pointer is verified by parsing the header: a name collision or a recycled name must
             // not silently produce a wrong replay.
@@ -213,10 +212,6 @@ public sealed class ReplayResolver
     /// <summary>Level 1 for a beatmap MD5 only (the memory-free path).</summary>
     public IReadOnlyList<ReplayCandidate> FromScoresDatabase(string beatmapMd5)
         => FromScoresDatabase(null, beatmapMd5);
-
-    /// <summary>All local scores of a beatmap, straight from <c>scores.db</c> (for the candidate dropdown).</summary>
-    public IReadOnlyList<ScoreRecord> LocalScores(string beatmapMd5)
-        => ScoreProvider.ForBeatmap(beatmapMd5);
 
     // ---------------------------------------------------------------- level 2
 
@@ -424,10 +419,6 @@ public sealed class ReplayResolver
         };
     }
 
-    /// <summary>Level 4 stub (see <see cref="InMemoryReplayDump"/>).</summary>
-    public ReplayCandidate? FromMemoryDump(GameSnapshot? snapshot, byte[]? replayBytes)
-        => InMemoryReplayDump.TryBuild(snapshot, replayBytes, Locator);
-
     // ---------------------------------------------------------------- scan plumbing
 
     /// <summary>Builds or refreshes the header index. Cheap on repeat runs thanks to the mtime cache.</summary>
@@ -455,7 +446,7 @@ public sealed class ReplayResolver
             return none;
         }
 
-        var cached = Options.UseCache ? LoadCache(directories) : new Dictionary<string, ReplayHeaderIndexEntry>(StringComparer.OrdinalIgnoreCase);
+        var cached = LoadCache();
 
         var files = new List<string>();
         foreach (var dir in directories)
@@ -613,7 +604,7 @@ public sealed class ReplayResolver
         return scan;
     }
 
-    private Dictionary<string, ReplayHeaderIndexEntry> LoadCache(IReadOnlyList<string> directories)
+    private Dictionary<string, ReplayHeaderIndexEntry> LoadCache()
     {
         var empty = new Dictionary<string, ReplayHeaderIndexEntry>(StringComparer.OrdinalIgnoreCase);
         if (!Options.UseCache || !File.Exists(CachePath))
@@ -705,31 +696,6 @@ public sealed class ReplayResolver
         }
 
         return ScoreProvider.ForBeatmap(md5).FirstOrDefault(s => s.ReplayFiletime == filetime.Value);
-    }
-
-    private string? CombineReplayPath(string fileName)
-    {
-        if (string.IsNullOrEmpty(Locator.DataRDirectory))
-        {
-            return null;
-        }
-
-        var candidate = Path.Combine(Locator.DataRDirectory, fileName);
-        if (File.Exists(candidate))
-        {
-            return candidate;
-        }
-
-        if (!string.IsNullOrEmpty(Locator.ReplaysDirectory))
-        {
-            var exported = Path.Combine(Locator.ReplaysDirectory, fileName);
-            if (File.Exists(exported))
-            {
-                return exported;
-            }
-        }
-
-        return candidate;
     }
 
     private static IReadOnlyList<ReplayCandidate> Order(IEnumerable<ReplayCandidate> candidates)
@@ -1122,22 +1088,4 @@ public sealed class ReplayHeaderIndexEntryDto
             Error = Error
         };
     }
-}
-
-/// <summary>
-/// Level-4 placeholder: synthesising a valid <c>.osr</c> from the replay action buffer in memory.
-/// Deliberately not implemented in this milestone —the plan calls it the last-resort path and it
-/// needs a real game session to validate. Returning <c>null</c> keeps the degradation chain honest.
-/// </summary>
-public static class InMemoryReplayDump
-{
-    public static ReplayCandidate? TryBuild(GameSnapshot? snapshot, byte[]? replayBytes, GameLocator locator)
-    {
-        _ = snapshot;
-        _ = replayBytes;
-        _ = locator;
-        return null;
-    }
-
-    public static bool IsImplemented => false;
 }

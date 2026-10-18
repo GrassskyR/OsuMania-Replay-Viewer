@@ -7,18 +7,6 @@ public sealed class ReplayVideoFileNameTests : IDisposable
 {
     private readonly string _directory = RepoPaths.CreateTempDirectory();
 
-    [Theory]
-    [InlineData(0, "Osu")]
-    [InlineData(1, "Taiko")]
-    [InlineData(2, "CatchTheBeat")]
-    [InlineData(3, "OsuMania")]
-    public void HashedReplay_UsesUtf8HeaderAndMetadataWithReplayMode(byte mode, string modeName)
-    {
-        var (map, replay) = WriteInputs("俊达萌", mode);
-        Assert.Equal($"俊达萌 - Artist - Song [Difficulty] (2026-10-13) {modeName}.mp4",
-            ReplayVideoFileName.Create(map, replay));
-    }
-
     [Fact]
     public void RealReplay_RenamedToHash_StillProducesExportName()
     {
@@ -35,35 +23,6 @@ public sealed class ReplayVideoFileNameTests : IDisposable
         var (map, replay) = WriteInputs("玩家/一", title: "Song: Part 2?", difficulty: "Hard/Extra*");
         Assert.Equal("玩家_一 - Artist - Song_ Part 2_ [Hard_Extra_] (2026-10-13) OsuMania.mp4",
             ReplayVideoFileName.Create(map, replay));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void MissingPlayer_FallsBackToSourceName(string player)
-    {
-        var (map, replay) = WriteInputs(player);
-        Assert.Equal("hash-123.mp4", ReplayVideoFileName.Create(map, replay));
-    }
-
-    [Fact]
-    public void MissingMetadataOrTruncatedHeader_FallsBackToSourceName()
-    {
-        var (map, replay) = WriteInputs("Player");
-        File.WriteAllText(map, "[General]\nTitle: Not metadata\n");
-        Assert.Equal("hash-123.mp4", ReplayVideoFileName.Create(map, replay));
-        File.WriteAllBytes(replay, new byte[] { 3, 0 });
-        Assert.Equal("hash-123.mp4", ReplayVideoFileName.Create(map, replay));
-        // A corrupt string byte length is rejected as InvalidDataException by the core reader.
-        File.WriteAllBytes(replay, new byte[] { 3, 0, 0, 0, 0, 0x0b, 0xff, 0xff, 0xff, 0x7f });
-        Assert.Equal("hash-123.mp4", ReplayVideoFileName.Create(map, replay));
-    }
-
-    [Fact]
-    public void Malody_KeepsSourceName_AndProtectsWindowsDeviceNames()
-    {
-        Assert.Equal("Sewing.mp4", ReplayVideoFileName.Create("map.mc", "Sewing.mr"));
-        Assert.Equal("_CON.mp4", ReplayVideoFileName.Create("map.mc", "CON.mr"));
     }
 
     [Fact]

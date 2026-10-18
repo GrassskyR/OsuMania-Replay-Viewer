@@ -78,7 +78,7 @@ public static class RenderExporter
         try
         {
             var preparation = PipelineRunner.Prepare(beatMapPath, replayPath, temp,
-                (key, args) => log.Debug(key, args));
+                (key, args) => log.Debug(key, args), config);
 
             // Resolve archive/directory inputs before reading the beatmap's display metadata.
             if (outputVideoPath is null)
@@ -100,15 +100,9 @@ public static class RenderExporter
                     cancellationToken);
             }
 
-            // Main.kt deletes the output before rendering, so ffmpeg is never asked to overwrite.
-            if (File.Exists(outputVideoPath))
-            {
-                File.Delete(outputVideoPath);
-            }
-
             var encoder = new Encoder(
                 preparation.BeatMap,
-                imagePath,
+                rendered.ImagePaths,
                 outputVideoPath,
                 preparation.ReplayModel.Rate,
                 (int)preparation.Delay,
@@ -119,11 +113,6 @@ public static class RenderExporter
                 log);
 
             encoder.GenerateVideo(progress, cancellationToken, encoderSelected);
-
-            if (!File.Exists(outputVideoPath))
-            {
-                throw new VideoGenerationException(outputVideoPath);
-            }
 
             return new Result
             {

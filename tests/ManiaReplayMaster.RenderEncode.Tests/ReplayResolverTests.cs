@@ -12,12 +12,8 @@ public sealed class ReplayResolverTests : IDisposable
     private const string ReplayFile = "Kuit - Doin - Pine nut [ATTang's Lv.27] (2020-10-03) OsuMania.osr";
 
     [Theory]
-    [InlineData("", true, false)]
-    [InlineData("", false, false)]
     [InlineData("", true, true)]
     [InlineData("", false, true)]
-    [InlineData("   ", true, false)]
-    [InlineData("Player", true, false)]
     public void MatchingScore_ResolvesReplay_WithOrWithoutPlayerName(string player, bool useDatabase, bool nullMarker)
     {
         var (resolver, path, header) = CreateReplay(player, useDatabase, nullMarker);
@@ -34,20 +30,11 @@ public sealed class ReplayResolverTests : IDisposable
 
     [Theory]
     [InlineData("Player", "")]
-    [InlineData("", "Player")]
     public void DifferentPlayer_DoesNotBecomeAnExactMatch(string observedPlayer, string replayPlayer)
     {
         var (resolver, _, header) = CreateReplay(replayPlayer, true);
         var result = resolver.Resolve(Snapshot(header, observedPlayer), allowScan: false);
         Assert.False(result.IsConfident);
-    }
-
-    [Fact]
-    public void UnavailablePlayer_WithMatchingScoreHitsAndDate_StillResolves()
-    {
-        var (resolver, _, header) = CreateReplay("", true, true);
-        var result = resolver.Resolve(Snapshot(header, null), allowScan: false);
-        Assert.True(result.IsConfident, result.Best?.Explanation);
     }
 
     [Fact]

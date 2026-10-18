@@ -22,7 +22,6 @@ public sealed class ScoreDatabaseProvider
     private ScoreDatabaseResult? _result;
     private long _loadedSize = -1;
     private long _loadedTicks = -1;
-    private DateTime _lastAttemptUtc = DateTime.MinValue;
 
     public ScoreDatabaseProvider(GameLocator locator, ScoreDatabaseOptions? options = null)
     {
@@ -135,7 +134,6 @@ public sealed class ScoreDatabaseProvider
             _result = fresh;
             _loadedSize = size;
             _loadedTicks = ticks;
-            _lastAttemptUtc = DateTime.UtcNow;
             TotalParseTime += stopwatch.Elapsed;
             return _result;
         }
@@ -151,13 +149,6 @@ public sealed class ScoreDatabaseProvider
 
         var result = Load();
         return result?.ForBeatmap(beatmapMd5) ?? Array.Empty<ScoreRecord>();
-    }
-
-    /// <summary>Total number of local scores across every beatmap.</summary>
-    public int TotalRecordCount()
-    {
-        var result = Load();
-        return result?.ScoreRecordCount ?? 0;
     }
 
     public override string ToString()

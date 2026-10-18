@@ -22,9 +22,11 @@ public sealed class OsuManiaJudger : BaseJudger
     private const int JMiss = 5;
 
     private readonly HashSet<Note> _lnHasJudged = new(ReferenceEqualityComparer.Instance);
+    private readonly bool _scoreV2Adjust;
 
-    public OsuManiaJudger(BeatMap beatMap, ReplayModel replayModel) : base(beatMap, replayModel)
+    public OsuManiaJudger(BeatMap beatMap, ReplayModel replayModel, Config? config = null) : base(beatMap, replayModel)
     {
+        _scoreV2Adjust = (config ?? Config.Instance).OmScoreV2Adjust;
     }
 
     public override int CanHit(Note action, Note note)
@@ -46,7 +48,7 @@ public sealed class OsuManiaJudger : BaseJudger
             isTooLate = action.TimeStamp - note.EndTime
                 > JudgementWindow[J100] * (ReplayModel.IsScoreV2 ? 1.5 : 1.0);
 
-            if (Config.Instance.OmScoreV2Adjust)
+            if (_scoreV2Adjust)
             {
                 Note? nextNote = null;
                 var i = note.Index + 1;
@@ -120,18 +122,6 @@ public sealed class OsuManiaJudger : BaseJudger
         }
 
         return Judgements.HitAndCanHitAgain;
-    }
-
-    public override int GetJudgement(double diff, Note? note = null, Note? action = null)
-    {
-        // The original had an intentionally empty ScoreV2 branch here
-        // (the LNHasJudged short-circuit is commented out); kept empty for clarity.
-        if (note is not null && ReplayModel.IsScoreV2)
-        {
-            // intentionally empty — see the commented-out block in the Kotlin source
-        }
-
-        return base.GetJudgement(diff, note, action);
     }
 
     public override double CalculateAccuracy(List<Note> notes)

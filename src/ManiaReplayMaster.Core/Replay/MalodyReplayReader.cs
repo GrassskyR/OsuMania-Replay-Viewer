@@ -52,14 +52,15 @@ public sealed class MalodyReplayReader : IReplayReader
         return string.Join(", ", names);
     }
 
-    private static double[] GetJudgement(int judgeLevel, double rate)
+    private static double[] GetJudgement(int judgeLevel, double rate, bool isMalodyPE)
     {
         return JudgementTable[judgeLevel]
-            .Select(it => (it + (Config.Instance.IsMalodyPE ? 9 : 0)) / rate)
+            .Select(it => (it + (isMalodyPE ? 9 : 0)) / rate)
             .ToArray();
     }
 
-    public IJudger GetJudger(BeatMap beatMap, Model.ReplayModel replayModel) => new MalodyJudger(beatMap, replayModel);
+    public IJudger GetJudger(BeatMap beatMap, Model.ReplayModel replayModel, Config? config = null)
+        => new MalodyJudger(beatMap, replayModel);
 
     public string ReadBeatMapMd5(string replayPath)
     {
@@ -69,7 +70,7 @@ public sealed class MalodyReplayReader : IReplayReader
         return reader.ReadMalodyString() ?? string.Empty;
     }
 
-    public Model.ReplayModel ReadReplay(string path, BeatMap beatMap)
+    public Model.ReplayModel ReadReplay(string path, BeatMap beatMap, Config? config = null)
     {
         using var reader = OsuBinaryReader.OpenFile(path);
 
@@ -97,7 +98,7 @@ public sealed class MalodyReplayReader : IReplayReader
             : 1.0;
 
         var judge = reader.ReadInt32(); // 0-4: A-E
-        var judgement = GetJudgement(judge, rate);
+        var judgement = GetJudgement(judge, rate, (config ?? Config.Instance).IsMalodyPE);
 
         CheckFormatValid(path, reader.ReadMalodyString() == "mr data");
         _ = reader.ReadByteAsHexString(4); // version

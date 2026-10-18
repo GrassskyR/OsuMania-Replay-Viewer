@@ -83,14 +83,12 @@ public sealed class OsuReplayReader : IReplayReader
         };
     }
 
-    public static IJudger GetJudgerFor(BeatMap beatMap, ReplayModel replayModel) => beatMap.Type switch
+    public IJudger GetJudger(BeatMap beatMap, ReplayModel replayModel, Config? config = null) => beatMap.Type switch
     {
-        BeatMap.TypeMania => new OsuManiaJudger(beatMap, replayModel),
-        BeatMap.TypeTaiko => new OsuTaikoJudger(beatMap, replayModel),
+        BeatMap.TypeMania => new OsuManiaJudger(beatMap, replayModel, config),
+        BeatMap.TypeTaiko => new OsuTaikoJudger(beatMap, replayModel, config),
         _ => throw new InvalidOperationException("Unsupported beatmap type for the osu! judger.")
     };
-
-    public IJudger GetJudger(BeatMap beatMap, ReplayModel replayModel) => GetJudgerFor(beatMap, replayModel);
 
     public string ReadBeatMapMd5(string replayPath)
     {
@@ -98,7 +96,7 @@ public sealed class OsuReplayReader : IReplayReader
         return replay.BeatmapHash ?? string.Empty;
     }
 
-    public ReplayModel ReadReplay(string path, BeatMap beatMap)
+    public ReplayModel ReadReplay(string path, BeatMap beatMap, Config? config = null)
     {
         var replay = OsuReplayParser.Parse(path);
         var raw = OsuReplayParser.Decompress(replay);

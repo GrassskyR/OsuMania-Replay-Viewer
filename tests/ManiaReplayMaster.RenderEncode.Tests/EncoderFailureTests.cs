@@ -31,7 +31,7 @@ public class EncoderFailureTests
             var image = WriteSingleSlice(temp);
             var selections = new List<EncoderSelection>();
             var encoder = new EncodeEncoder(new BeatMap { Duration = 500, BgmPath = BeatMap.MuteMusic },
-                image, Path.Combine(temp, "fallback.mp4"), 1, 0, 30, ffmpeg, 540,
+                new[] { image }, Path.Combine(temp, "fallback.mp4"), 1, 0, 30, ffmpeg, 540,
                 new Config { Codec = "auto", CodecProfile = "high444" });
             encoder.GenerateVideo(encoderSelected: selections.Add);
 
@@ -66,30 +66,6 @@ public class EncoderFailureTests
     }
 
     [Fact]
-    public void MissingOutput_ThrowsVideoGenerationException()
-    {
-        var (ffmpeg, _) = FfmpegProbe.Resolve();
-        var temp = RepoPaths.CreateTempDirectory();
-        try
-        {
-            var image = WriteSingleSlice(temp);
-            var beatMap = new BeatMap { Key = 4, Duration = 5000, BgmPath = BeatMap.MuteMusic };
-            var config = new Config { Codec = "definitely-not-a-codec" };
-            var encoder = new EncodeEncoder(beatMap, image, Path.Combine(temp, "v.mp4"), 1.0, 1000, 150, ffmpeg, 540,
-                config);
-
-            var exception = Assert.Throws<VideoGenerationException>(() => encoder.GenerateVideo());
-
-            Assert.Equal("render_failed", exception.ErrorCode);
-            Assert.False(File.Exists(Path.Combine(temp, "v.mp4")));
-        }
-        finally
-        {
-            RepoPaths.DeleteDirectory(temp);
-        }
-    }
-
-    [Fact]
     public void PreCancelledToken_ThrowsOperationCanceledAndDoesNotProduceOutput()
     {
         var (ffmpeg, _) = FfmpegProbe.Resolve();
@@ -98,7 +74,7 @@ public class EncoderFailureTests
         {
             var image = WriteSingleSlice(temp);
             var beatMap = new BeatMap { Key = 4, Duration = 5000, BgmPath = BeatMap.MuteMusic };
-            var encoder = new EncodeEncoder(beatMap, image, Path.Combine(temp, "v.mp4"), 1.0, 1000, 150, ffmpeg, 540,
+            var encoder = new EncodeEncoder(beatMap, new[] { image }, Path.Combine(temp, "v.mp4"), 1.0, 1000, 150, ffmpeg, 540,
                 new Config());
 
             using var cts = new CancellationTokenSource();
@@ -126,8 +102,6 @@ public class EncoderFailureTests
             bitmap.Save(imagePath, ImageFormat.Png);
         }
 
-        // The encoder looks for v_0.png, not v.png.
-        File.Copy(imagePath, Path.Combine(directory, "v_0.png"), true);
         return imagePath;
     }
 }

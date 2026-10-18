@@ -89,7 +89,7 @@ NuGet 默认从 nuget.org 恢复，依赖包不纳入源码管理。离线环境
 
 ### 验证与诊断
 
-默认测试保留判定边界、四组 Java 参考输出逐字段对照、渲染、文件命名和 FFmpeg 命令构造检查。需要外部 FFmpeg 的测试统一标记为 `Category=EndToEnd`，使用 `e2e` 单独运行；需同时安装 `ffmpeg` 与 `ffprobe`，可用 `MRM_FFMPEG` 指定 ffmpeg 路径。
+测试仅保留判定边界、四组参考结果对照、谱面与回放匹配、绘图、文件命名和编码器选择等关键回归。实际视频导出、逐帧连续性及编码失败/取消测试标记为 `Category=EndToEnd`，使用 `e2e` 单独运行；需同时安装 `ffmpeg` 与 `ffprobe`，可用 `MRM_FFMPEG` 指定 ffmpeg 路径。
 
 ```powershell
 ./build.ps1 cli -- dump-judge 'map.osu' 'replay.osr' --out out/judgements.json
@@ -130,6 +130,8 @@ Release 包含 `ManiaReplayViewer-win-x64.zip`（自包含目录版）和 `Mania
 | `docs/FORMATS.md` | 数据库布局及内存读取维护说明 |
 
 渲染器按时间窗口生成静态长图，再由 FFmpeg 按帧滚动、拼接并合成音频。滚动合成采用 YUV 4:4:4，最终输出常用的 YUV 4:2:0，避免奇数流速导致位移交替跳动。
+
+`Pipeline.Prepare` 接受独立配置，完成谱面定位、解析与判定；`PipelineSnapshot.Create` 将已有判定结果转换为诊断快照。`RenderExporter.Run` 串联判定、绘图与编码，直接将渲染结果中的图片列表交给编码器。编码器负责分段、合并及 GPU 失败回退，界面负责异步任务与取消状态。
 
 ## 许可证
 

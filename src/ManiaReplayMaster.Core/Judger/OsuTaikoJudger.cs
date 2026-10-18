@@ -13,9 +13,11 @@ public sealed class OsuTaikoJudger : BaseJudger
 
     private readonly Dictionary<Note, Note> _firstHitNoteToAction = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Note, Note> _wrongHitNoteToAction = new(ReferenceEqualityComparer.Instance);
+    private readonly bool _singleColumn;
 
-    public OsuTaikoJudger(BeatMap beatMap, ReplayModel replayModel) : base(beatMap, replayModel)
+    public OsuTaikoJudger(BeatMap beatMap, ReplayModel replayModel, Config? config = null) : base(beatMap, replayModel)
     {
+        _singleColumn = (config ?? Config.Instance).TaikoSingleColumn;
     }
 
     public override int CanHit(Note action, Note note)
@@ -149,7 +151,7 @@ public sealed class OsuTaikoJudger : BaseJudger
     {
         base.Judge();
 
-        if (Config.Instance.TaikoSingleColumn)
+        if (_singleColumn)
         {
             // taiko: single column
             BeatMap.Notes = BeatMap.Notes
