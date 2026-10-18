@@ -183,7 +183,9 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private string _codec = "libx264";
+    public IReadOnlyList<string> CodecChoices { get; } = new[] { "auto", "libx264", "h264_nvenc", "h264_qsv", "h264_amf" };
+
+    private string _codec = "auto";
     public string Codec
     {
         get => _codec;
@@ -192,12 +194,13 @@ internal sealed class MainViewModel : INotifyPropertyChanged
             if (Set(ref _codec, value))
             {
                 Core.Model.Config.Instance.Codec = value;
+                CodecPreset = "auto";
                 UiSettings.Current.RememberRendering(Core.Model.Config.Instance);
             }
         }
     }
 
-    private string _codecPreset = "ultrafast";
+    private string _codecPreset = "auto";
     public string CodecPreset
     {
         get => _codecPreset;

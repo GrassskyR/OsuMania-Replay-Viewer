@@ -7,8 +7,7 @@ using ManiaReplayMaster.Encode.Diagnostics;
 namespace ManiaReplayMaster.Encode;
 
 /// <summary>
-/// Port of <c>me.replaymaster.Encoder</c> (route E1: the ffmpeg filter graph is reproduced
-/// verbatim).
+/// Port of <c>me.replaymaster.Encoder</c> with automatic hardware selection and stream-copy merging.
 ///
 /// The class consumes the long-strip PNGs written by the renderer (<c>name_0.png</c>,
 /// <c>name_1.png</c>, ...) and produces the final mp4:
@@ -20,7 +19,7 @@ namespace ManiaReplayMaster.Encode;
 /// in a single pass that also mixes the audio (<c>atempo</c> + <c>adelay</c>);</item>
 /// <item>with more images the windows are grouped into <c>ceil(count / N)</c> silent slices
 /// (<c>name_0.mp4</c>, <c>name_1.mp4</c>, ...) which are then concatenated and audio-muxed in a
-/// final <c>mergeSlices</c> pass -- the workaround for <c>-filter_complex</c> size limits.</item>
+/// final stream-copy pass, avoiding a second video encode and <c>-filter_complex</c> size limits.</item>
 /// </list>
 ///
 /// Added over the reference: <see cref="IProgress{T}"/> reporting and
@@ -44,6 +43,9 @@ public sealed class Encoder
     private readonly int _maxProcessingSize;
 
     private readonly List<IReadOnlyList<string>> _executedCommands = new();
+    private EncoderSelection _selection = new("libx264", "ultrafast");
+
+    public EncoderSelection SelectedEncoder => _selection;
 
     public Encoder(
         BeatMap beatMap,
@@ -96,7 +98,32 @@ public sealed class Encoder
     /// <see cref="OperationCanceledException"/> is thrown.
     /// </param>
     public void GenerateVideo(IProgress<EncodeProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<EncoderSelection>? encoderSelected = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var width = _beatMap.IsTaiko ? _config.Height : _gameWidth;
+        var height = _beatMap.IsTaiko ? _gameWidth : _config.Height;
+        _selection = VideoEncoderSelector.Detect(_ffmpegPath, width, height, _config.FramePerSecond,
+            _config.Codec, _config.CodecPreset, _log, cancellationToken);
+        encoderSelected?.Invoke(_selection);
+        try
+        {
+            GenerateVideoCore(progress, cancellationToken);
+        }
+        catch (VideoGenerationException ex) when (VideoEncoderSelector.IsAutomatic(_config.Codec)
+                                                 && _selection.IsHardwareAccelerated)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _log.Debug($"Hardware encoding failed; retrying with libx264. {ex}");
+            _selection = new EncoderSelection("libx264", "ultrafast", IsFallback: true);
+            encoderSelected?.Invoke(_selection);
+            File.Delete(_outFile);
+            GenerateVideoCore(progress, cancellationToken);
+        }
+    }
+
+    private void GenerateVideoCore(IProgress<EncodeProgress>? progress, CancellationToken cancellationToken)
     {
         var reporter = new ProgressReporter(progress);
 
@@ -185,22 +212,28 @@ public sealed class Encoder
         ProgressReporter reporter,
         CancellationToken cancellationToken)
     {
+        var concatList = Path.Combine(Path.GetDirectoryName(_baseImageFile)!, "concat-" + Guid.NewGuid().ToString("N") + ".txt");
+        File.WriteAllLines(concatList, FfmpegCommandBuilder.BuildConcatList(slices));
         var arguments = FfmpegCommandBuilder.BuildMerge(new FfmpegMergeRequest
         {
-            SlicePaths = slices,
+            ConcatListPath = concatList,
             BgmPath = _beatMap.BgmPath,
             Rate = _rate,
             AudioDelay = _audioDelay,
-            OutPath = _outFile,
-            Codec = _config.Codec,
-            CodecPreset = _config.CodecPreset,
-            CodecProfile = _config.CodecProfile
+            OutPath = _outFile
         });
 
         // Note: the reference does NOT delete the output before the merge pass (Main.kt deletes it
         // once before rendering); ffmpeg is invoked without -y, so a stale file would abort the merge.
-        RunFfmpeg(arguments, _outFile, expectedDuration, stage, startProgress, endProgress, reporter,
-            cancellationToken);
+        try
+        {
+            RunFfmpeg(arguments, _outFile, expectedDuration, stage, startProgress, endProgress, reporter,
+                cancellationToken);
+        }
+        finally
+        {
+            File.Delete(concatList);
+        }
     }
 
     private void GenerateVideoRange(
@@ -237,8 +270,8 @@ public sealed class Encoder
             Rate = _rate,
             AudioDelay = _audioDelay,
             OutPath = Path.GetFullPath(outPath),
-            Codec = _config.Codec,
-            CodecPreset = _config.CodecPreset,
+            Codec = _selection.Codec,
+            CodecPreset = _selection.Preset,
             CodecProfile = _config.CodecProfile
         });
 

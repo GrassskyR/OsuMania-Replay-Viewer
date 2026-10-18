@@ -60,7 +60,8 @@ public static class RenderExporter
         IProgress<EncodeProgress>? progress = null,
         string? ffmpegPath = null,
         PortLogger? log = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Action<EncoderSelection>? encoderSelected = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(beatMapPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(replayPath);
@@ -117,7 +118,7 @@ public static class RenderExporter
                 config,
                 log);
 
-            encoder.GenerateVideo(progress, cancellationToken);
+            encoder.GenerateVideo(progress, cancellationToken, encoderSelected);
 
             if (!File.Exists(outputVideoPath))
             {

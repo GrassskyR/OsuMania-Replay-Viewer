@@ -38,14 +38,17 @@ public class RenderExportEndToEndTests
     /// </summary>
     private static Config EncodeConfig() => new();
 
-    [Fact]
-    public void MutedFixture_SplitsIntoThreeSlicePassesAndProducesPlayableMp4()
+    [Theory]
+    [InlineData("libx264")]
+    [InlineData("auto")]
+    public void MutedFixture_SplitsIntoThreeSlicePassesAndProducesPlayableMp4(string codec)
     {
         var (ffmpeg, ffprobe) = FfmpegProbe.Resolve();
         var temp = RepoPaths.CreateTempDirectory();
         try
         {
             var config = EncodeConfig();
+            config.Codec = codec;
             var preparation = PipelineRunner.Prepare(
                 RepoPaths.Fixture(BeatMapFile), RepoPaths.Fixture(ReplayFile));
 
@@ -101,10 +104,12 @@ public class RenderExportEndToEndTests
             Assert.Contains("concat=n=20:v=1[video]", FilterGraph(commands[1]));
             Assert.Contains("concat=n=20:v=1[video]", FilterGraph(commands[2]));
             Assert.Contains("concat=n=7:v=1[video]", FilterGraph(commands[3]));
-            Assert.Contains("concat=n=3:v=1:a=0[video]", FilterGraph(commands[4]));
-            Assert.Equal(4, commands[4].Count(argument => argument == "-i")); // bgm + 3 slices
+            Assert.Contains("concat", commands[4]);
+            Assert.Contains("copy", commands[4]);
+            Assert.Equal(2, commands[4].Count(argument => argument == "-i")); // bgm + concat list
             // commands[0] is the bare anullsrc generation, which carries no encoder options.
-            Assert.All(commands.Skip(1), command => Assert.Contains("-preset:v", command));
+            Assert.All(commands.Skip(1).Take(3), command =>
+                Assert.Contains(encoder.SelectedEncoder.Codec == "h264_amf" ? "-quality:v" : "-preset:v", command));
             Assert.All(commands.Skip(1), command => Assert.Contains("-benchmark", command));
 
             Assert.True(File.Exists(outFile), "mp4 was not produced");

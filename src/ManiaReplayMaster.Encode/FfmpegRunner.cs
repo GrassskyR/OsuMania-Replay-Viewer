@@ -45,6 +45,7 @@ public static class FfmpegRunner
         PortLogger log,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var startInfo = new ProcessStartInfo
         {
             FileName = ffmpegPath,
@@ -74,8 +75,11 @@ public static class FfmpegRunner
             // The child may have exited before we got here; nothing to do.
         }
 
+        var recentLines = new System.Collections.Concurrent.ConcurrentQueue<string>();
         void HandleLine(string line)
         {
+            recentLines.Enqueue(line);
+            while (recentLines.Count > 20) recentLines.TryDequeue(out _);
             log.Debug("[FFMPEG] " + line);
             if (expectedDuration == 0.0)
             {
@@ -102,20 +106,22 @@ public static class FfmpegRunner
 
         Task.WaitAll(stdoutPump, stderrPump);
 
-        if (expectedDuration != 0.0)
-        {
-            reporter.Report(stage, startProgress, endProgress, 100.0);
-        }
-
         if (cancellationToken.IsCancellationRequested)
         {
             throw new OperationCanceledException(
                 $"ffmpeg was cancelled during stage '{stage}'.", cancellationToken);
         }
 
-        if (!File.Exists(expectedOutputPath))
+        // FFmpeg can leave a partial MP4 after a driver/encoder failure. File existence is not success.
+        if (process.ExitCode != 0 || !File.Exists(expectedOutputPath))
         {
-            throw new VideoGenerationException(new Exception(expectedOutputPath));
+            throw new VideoGenerationException($"FFmpeg exited with code {process.ExitCode} during '{stage}'. " +
+                string.Join(Environment.NewLine, recentLines));
+        }
+
+        if (expectedDuration != 0.0)
+        {
+            reporter.Report(stage, startProgress, endProgress, 100.0);
         }
     }
 

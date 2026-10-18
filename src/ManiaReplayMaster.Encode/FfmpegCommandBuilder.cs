@@ -52,7 +52,7 @@ public sealed record FfmpegVideoRequest
 /// <summary>Inputs of <c>mergeSlices()</c> in <c>Encoder.kt</c>.</summary>
 public sealed record FfmpegMergeRequest
 {
-    public required IReadOnlyList<string> SlicePaths { get; init; }
+    public required string ConcatListPath { get; init; }
 
     public required string BgmPath { get; init; }
 
@@ -61,12 +61,6 @@ public sealed record FfmpegMergeRequest
     public required int AudioDelay { get; init; }
 
     public required string OutPath { get; init; }
-
-    public required string Codec { get; init; }
-
-    public required string CodecPreset { get; init; }
-
-    public required string CodecProfile { get; init; }
 }
 
 /// <summary>
@@ -80,12 +74,8 @@ public sealed record FfmpegMergeRequest
 /// The returned lists do NOT include the ffmpeg executable itself; <see cref="Encoder"/> prepends
 /// it exactly like the reference's <c>command.add(0, ffmpegPath)</c>.
 ///
-/// Two orderings are easy to get wrong and are preserved on purpose:
-/// <list type="bullet">
-/// <item>the single/final pass appends <c>concat</c> to the graph *before* <c>atempo</c>/<c>adelay</c>;</item>
-/// <item><c>mergeSlices</c> appends <c>atempo</c>/<c>adelay</c> *before* <c>concat</c>, and that concat
-/// uses <c>v=1:a=0</c>.</item>
-/// </list>
+/// Single passes concatenate raw frames; multi-pass exports stream-copy the encoded slices
+/// through the concat demuxer and apply audio tempo/delay only once at the final merge.
 /// </summary>
 public static class FfmpegCommandBuilder
 {
@@ -164,7 +154,7 @@ public static class FfmpegCommandBuilder
         return command;
     }
 
-    /// <summary>Port of <c>Encoder.mergeSlices(...)</c>.</summary>
+    /// <summary>Concatenates encoded slices without decoding and encoding the video a second time.</summary>
     public static List<string> BuildMerge(FfmpegMergeRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -175,26 +165,32 @@ public static class FfmpegCommandBuilder
             FormattableString.Invariant($"[a1]adelay={request.AudioDelay}|{request.AudioDelay}[audio]")
         };
 
-        var command = new List<string> { "-i", request.BgmPath };
-        var outVideos = new List<string>();
-        for (var i = 0; i < request.SlicePaths.Count; i++)
+        var command = new List<string>
         {
-            command.Add("-i");
-            command.Add(request.SlicePaths[i]);
-            outVideos.Add($"[{i + 1}:v]");
-        }
-
-        filterGraph.Add(FormattableString.Invariant(
-            $"{string.Concat(outVideos)}concat=n={request.SlicePaths.Count}:v=1:a=0[video]"));
+            "-i", request.BgmPath,
+            "-f", "concat", "-safe", "0", "-i", request.ConcatListPath
+        };
 
         command.Add("-filter_complex");
         command.Add(string.Join(";", filterGraph));
         command.Add("-map");
-        command.Add("[video]");
+        command.Add("1:v:0");
         command.Add("-map");
         command.Add("[audio]");
-        AppendEncoderOptions(command, request.OutPath, request.Codec, request.CodecPreset, request.CodecProfile);
+        command.AddRange(new[] { "-c:v", "copy", "-benchmark", request.OutPath });
         return command;
+    }
+
+    public static IEnumerable<string> BuildConcatList(IEnumerable<string> slicePaths)
+    {
+        foreach (var path in slicePaths)
+        {
+            // ffconcat uses its own quoting rules, independently of ProcessStartInfo.ArgumentList.
+            var absolute = Path.GetFullPath(path);
+            if (absolute.Contains('\r') || absolute.Contains('\n'))
+                throw new ArgumentException("A concat input path cannot contain a line break.", nameof(slicePaths));
+            yield return "file '" + absolute.Replace('\\', '/').Replace("'", "'\\''") + "'";
+        }
     }
 
     /// <summary>
@@ -221,10 +217,33 @@ public static class FfmpegCommandBuilder
     private static void AppendEncoderOptions(List<string> command, string outPath, string codec,
         string codecPreset, string codecProfile)
     {
+        AppendVideoEncoderOptions(command, codec, codecPreset, codecProfile);
+        command.Add("-benchmark");
+        command.Add(outPath);
+    }
+
+    internal static void AppendVideoEncoderOptions(List<string> command, string codec,
+        string codecPreset, string codecProfile)
+    {
+        if (string.IsNullOrWhiteSpace(codecPreset) || VideoEncoderSelector.IsAutomatic(codecPreset))
+            codecPreset = VideoEncoderSelector.DefaultPreset(codec);
+
         command.Add("-c:v");
         command.Add(codec);
-        command.Add("-preset:v");
+        command.Add(codec == "h264_amf" ? "-quality:v" : "-preset:v");
         command.Add(codecPreset);
+        switch (codec)
+        {
+            case "h264_nvenc":
+                command.AddRange(new[] { "-rc:v", "vbr", "-cq:v", "23", "-b:v", "0" });
+                break;
+            case "h264_qsv":
+                command.AddRange(new[] { "-global_quality:v", "23" });
+                break;
+            case "h264_amf":
+                command.AddRange(new[] { "-rc:v", "cqp", "-qp_i:v", "23", "-qp_p:v", "23", "-qp_b:v", "23" });
+                break;
+        }
         command.Add("-pix_fmt");
         command.Add("yuv420p");
 
@@ -233,8 +252,5 @@ public static class FfmpegCommandBuilder
             command.Add("-profile:v");
             command.Add(codecProfile.Trim());
         }
-
-        command.Add("-benchmark");
-        command.Add(outPath);
     }
 }

@@ -321,7 +321,12 @@ public partial class MainWindow : Window
                         progress: progress,
                         ffmpegPath: null,
                         log: null,
-                        cancellationToken: token);
+                        cancellationToken: token,
+                        encoderSelected: selection => Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            if (selection.IsFallback) _vm.Log(Text("Log.EncoderFallback"));
+                            _vm.Log(Text("Log.EncoderSelected", selection.Codec, selection.Preset));
+                        })));
 
                     ReportSuccess(result.VideoPath, result.BeatMap, result.ReplayModel);
                 }

@@ -115,6 +115,14 @@ try {
         return $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
     }
 
+    $codecBox = Find-ById "CodecBox"
+    Check ($null -ne $codecBox) "found encoder selector"
+    if ($null -ne $codecBox) {
+        Check ($codecBox.Current.ControlType -eq [System.Windows.Automation.ControlType]::ComboBox) "encoder selector is a dropdown"
+        $codecValue = $codecBox.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+        Check (-not [string]::IsNullOrWhiteSpace($codecValue)) "encoder selector displays its current value" "got '$codecValue'"
+    }
+
     foreach ($pair in @(@("ReplayBox", $Replay), @("BeatmapBox", $Beatmap))) {
         $element = Find-ById $pair[0]
         if ($null -eq $element) { Check $false "found $($pair[0])"; exit 1 }

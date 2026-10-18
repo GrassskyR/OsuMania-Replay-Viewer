@@ -36,19 +36,11 @@ public class EncoderCommandLineTests
     private static FfmpegMergeRequest MergeRequest(double rate = 1.0)
         => new()
         {
-            SlicePaths = new[]
-            {
-                $@"{OutDir}\v_0.mp4",
-                $@"{OutDir}\v_1.mp4",
-                $@"{OutDir}\v_2.mp4"
-            },
+            ConcatListPath = $@"{OutDir}\slices.txt",
             BgmPath = $@"{ImageDir}\mute_sound.mp3",
             Rate = rate,
             AudioDelay = 1000,
-            OutPath = $@"{OutDir}\v.mp4",
-            Codec = "libx264",
-            CodecPreset = "ultrafast",
-            CodecProfile = "unknown"
+            OutPath = $@"{OutDir}\v.mp4"
         };
 
     [Fact]
@@ -134,21 +126,17 @@ public class EncoderCommandLineTests
     }
 
     [Fact]
-    public void Merge_MatchesReferenceOrdering_AudioFiltersBeforeConcat()
+    public void Merge_CopiesEncodedVideoAndOnlyFiltersAudio()
     {
         var expected = new List<string>
         {
             "-i", $@"{ImageDir}\mute_sound.mp3",
-            "-i", $@"{OutDir}\v_0.mp4",
-            "-i", $@"{OutDir}\v_1.mp4",
-            "-i", $@"{OutDir}\v_2.mp4",
+            "-f", "concat", "-safe", "0", "-i", $@"{OutDir}\slices.txt",
             "-filter_complex",
-            "[0:a]atempo=1.5[a1];[a1]adelay=1000|1000[audio];[1:v][2:v][3:v]concat=n=3:v=1:a=0[video]",
-            "-map", "[video]",
+            "[0:a]atempo=1.5[a1];[a1]adelay=1000|1000[audio]",
+            "-map", "1:v:0",
             "-map", "[audio]",
-            "-c:v", "libx264",
-            "-preset:v", "ultrafast",
-            "-pix_fmt", "yuv420p",
+            "-c:v", "copy",
             "-benchmark",
             $@"{OutDir}\v.mp4"
         };
@@ -164,7 +152,7 @@ public class EncoderCommandLineTests
         var actual = FfmpegCommandBuilder.BuildMerge(MergeRequest(rate: 0.75));
         var graph = actual[actual.IndexOf("-filter_complex") + 1];
 
-        Assert.StartsWith("[0:a]atempo=0.75[a1];[a1]adelay=1000|1000[audio];", graph);
+        Assert.Equal("[0:a]atempo=0.75[a1];[a1]adelay=1000|1000[audio]", graph);
     }
 
     private static string FilterGraph(IReadOnlyList<string> command)
@@ -227,14 +215,27 @@ public class EncoderCommandLineTests
         }
     }
 
-    [Fact]
-    public void ProfileValueIsForwardedForMergePassToo()
+    [Theory]
+    [InlineData("h264_nvenc", "-preset:v", "p1")]
+    [InlineData("h264_qsv", "-preset:v", "veryfast")]
+    [InlineData("h264_amf", "-quality:v", "speed")]
+    [InlineData("libx264", "-preset:v", "ultrafast")]
+    public void AutomaticPresetUsesEncoderSpecificOptions(string codec, string option, string preset)
     {
-        var command = FfmpegCommandBuilder.BuildMerge(MergeRequest() with { CodecProfile = "high" });
+        var command = FfmpegCommandBuilder.BuildVideo(VideoRequest(1, false) with
+        {
+            Codec = codec, CodecPreset = "auto"
+        });
+        Assert.Equal(preset, command[command.IndexOf(option) + 1]);
+        if (codec == "h264_amf") Assert.DoesNotContain("-preset:v", command);
+    }
 
-        var index = command.IndexOf("-profile:v");
-        Assert.True(index >= 0);
-        Assert.Equal("high", command[index + 1]);
+    [Fact]
+    public void ConcatListQuotesAbsolutePathsWithSpacesUnicodeAndApostrophes()
+    {
+        var path = @"C:\work\渲染 it's fine\v_0.mp4";
+        var line = Assert.Single(FfmpegCommandBuilder.BuildConcatList(new[] { path }));
+        Assert.Equal("file 'C:/work/渲染 it'\\''s fine/v_0.mp4'", line);
     }
 
     [Fact]

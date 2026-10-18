@@ -41,8 +41,8 @@ public sealed class UiSettings
     {
         if (_values["speed"] is JsonValue value && value.TryGetValue<int>(out var speed) && speed is >= 1 and <= 100)
             config.Speed = speed;
-        config.Codec = ReadString("codec") ?? config.Codec;
-        config.CodecPreset = ReadString("codecPreset") ?? config.CodecPreset;
+        config.Codec = ReadString("codec") ?? "auto";
+        config.CodecPreset = ReadString("codecPreset") ?? "auto";
     }
 
     public void RememberRendering(Config config)

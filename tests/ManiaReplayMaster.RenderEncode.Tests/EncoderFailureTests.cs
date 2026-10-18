@@ -2,6 +2,8 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using ManiaReplayMaster.Core;
 using ManiaReplayMaster.Core.Model;
+using ManiaReplayMaster.Encode;
+using ManiaReplayMaster.Encode.Diagnostics;
 // System.Drawing.Imaging also defines an `Encoder` type, so alias the one under test.
 using EncodeEncoder = ManiaReplayMaster.Encode.Encoder;
 
@@ -19,6 +21,50 @@ namespace ManiaReplayMaster.RenderEncode.Tests;
 [Trait("Category", "EndToEnd")]
 public class EncoderFailureTests
 {
+    [Fact]
+    public void AutomaticMode_RetriesSoftwareWhenHardwareRejectsAnX264OnlyProfile()
+    {
+        var (ffmpeg, ffprobe) = FfmpegProbe.Resolve();
+        var temp = RepoPaths.CreateTempDirectory();
+        try
+        {
+            var image = WriteSingleSlice(temp);
+            var selections = new List<EncoderSelection>();
+            var encoder = new EncodeEncoder(new BeatMap { Duration = 500, BgmPath = BeatMap.MuteMusic },
+                image, Path.Combine(temp, "fallback.mp4"), 1, 0, 30, ffmpeg, 540,
+                new Config { Codec = "auto", CodecProfile = "high444" });
+            encoder.GenerateVideo(encoderSelected: selections.Add);
+
+            Assert.Equal("libx264", encoder.SelectedEncoder.Codec);
+            Assert.True(encoder.SelectedEncoder.IsFallback);
+            if (selections[0].IsHardwareAccelerated) Assert.Equal(2, selections.Count);
+            Assert.Single(FfmpegProbe.Inspect(ffprobe, Path.Combine(temp, "fallback.mp4")).VideoStreams);
+        }
+        finally
+        {
+            RepoPaths.DeleteDirectory(temp);
+        }
+    }
+
+    [Fact]
+    public void FailedProcessIsNotSuccessEvenWhenAnOutputFileExists()
+    {
+        var (ffmpeg, _) = FfmpegProbe.Resolve();
+        var temp = RepoPaths.CreateTempDirectory();
+        try
+        {
+            var output = Path.Combine(temp, "partial.mp4");
+            File.WriteAllText(output, "incomplete output");
+            Assert.Throws<VideoGenerationException>(() => FfmpegRunner.Run(ffmpeg,
+                new[] { "-definitely-not-an-option" }, output, 1, "test", 0, 100,
+                new ProgressReporter(null), new PortLogger()));
+        }
+        finally
+        {
+            RepoPaths.DeleteDirectory(temp);
+        }
+    }
+
     [Fact]
     public void MissingOutput_ThrowsVideoGenerationException()
     {
