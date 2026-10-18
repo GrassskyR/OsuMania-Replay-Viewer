@@ -21,6 +21,7 @@
   <data name="ReadMemory.Tooltip" xml:space="preserve"><value>Read the current osu! score to identify its replay.</value></data>
   <data name="DebugLogging" xml:space="preserve"><value>Debug logging</value></data>
   <data name="Speed" xml:space="preserve"><value>Scroll speed</value></data>
+  <data name="Speed.Tooltip" xml:space="preserve"><value>Uses the original 60 FPS speed scale; 20 means 1200 pixels per second. Changing FPS does not change scroll speed.</value></data>
   <data name="Width" xml:space="preserve"><value>Width</value></data>
   <data name="Height" xml:space="preserve"><value>Height</value></data>
   <data name="FPS" xml:space="preserve"><value>FPS</value></data>

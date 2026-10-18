@@ -10,7 +10,7 @@ namespace ManiaReplayMaster.Render;
 /// </summary>
 public sealed class RenderResult
 {
-    /// <summary><c>stepSize / pixelPerFrame</c> (integer division), i.e. frames per window.</summary>
+    /// <summary>Exact number of output frames covering one scroll step.</summary>
     public required int WindowFrameCount { get; init; }
 
     /// <summary>Canvas width: <c>Config.width</c>, or <c>Config.width / 4</c> for taiko single column.</summary>
@@ -22,10 +22,10 @@ public sealed class RenderResult
     /// <summary>Height of one long-strip PNG: <c>stepSize + gameHeight</c>.</summary>
     public required int WindowSize { get; init; }
 
-    /// <summary>Scroll step between two windows: <c>ensureMultiple(maxStepSize, speed)</c>.</summary>
+    /// <summary>Scroll step between windows, aligned to whole pixels and output frames.</summary>
     public required int StepSize { get; init; }
 
-    /// <summary><c>ensureMultiple(timeToHeight(duration), speed)</c>.</summary>
+    /// <summary>Duration expressed in pixels, rounded up to a whole-frame boundary.</summary>
     public required int TotalHeight { get; init; }
 
     /// <summary>Width of one judgement column: <c>Config.width / key</c>.</summary>

@@ -117,7 +117,7 @@
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Text Speed}" Style="{StaticResource Label}" />
         <Slider x:Name="SpeedSlider" Grid.Row="0" Grid.Column="1" Minimum="1" Maximum="100"
-                IsSnapToTickEnabled="True" TickFrequency="1"
+                IsSnapToTickEnabled="True" TickFrequency="1" ToolTip="{loc:Text Speed.Tooltip}"
                 Value="{Binding Speed}" ValueChanged="OnSpeedChanged" Margin="0,0,10,0" />
         <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Speed}" Width="30" />
 

@@ -1,6 +1,7 @@
 // Modified C# port of Mania-Replay-Master (Apache-2.0).
 // Copyright (c) 2020-present, project contributors. See NOTICE and licenses/Apache-2.0.txt.
 using ManiaReplayMaster.Encode.Compat;
+using ManiaReplayMaster.Core.Model;
 
 namespace ManiaReplayMaster.Encode;
 
@@ -19,6 +20,7 @@ public sealed record FfmpegVideoRequest
 
     public required int FramePerSecond { get; init; }
 
+    /// <summary>Scroll speed on the original 60 FPS scale, independent of output FPS.</summary>
     public required int Speed { get; init; }
 
     /// <summary><c>windowFrameCount / framePerSecond</c>.</summary>
@@ -91,8 +93,10 @@ public static class FfmpegCommandBuilder
         var outVideos = new List<string>();
         var count = request.ImagePaths.Count;
         var isTaikoSuffix = request.IsTaiko ? ",transpose=1" : string.Empty;
-        // Crop's frame index is an integer; time-based expressions can lose a pixel to rounding.
-        var scroll = FormattableString.Invariant($"n*{request.Speed}");
+        // Keep the 60 FPS speed scale, rounding only the final displacement to whole pixels.
+        // Aligned strip boundaries ensure this fractional movement remains continuous between PNGs.
+        var pixelsPerSecond = checked(request.Speed * Config.ScrollReferenceFrameRate);
+        var scroll = FormattableString.Invariant($"floor(n*{pixelsPerSecond}/{request.FramePerSecond})");
 
         for (var i = 0; i < count; i++)
         {

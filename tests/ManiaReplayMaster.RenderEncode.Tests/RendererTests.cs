@@ -20,14 +20,16 @@ public class RendererTests
 
     // ------------------------------------------------------------------ mania rendering
 
-    [Fact]
-    public void Start_WritesBlackSlicesAndOutlinedBaseNotesWithFilledActions()
+    [Theory]
+    [InlineData(60)]
+    [InlineData(120)]
+    public void Start_WritesBlackSlicesAndOutlinedBaseNotesWithFilledActions(int fps)
     {
         var temp = RepoPaths.CreateTempDirectory();
         try
         {
             // Odd width exercises the BGR stride padding in the PNG writer.
-            var config = new Config { Width = 541 };
+            var config = new Config { Width = 541, FramePerSecond = fps };
             var beatMap = ManiaMap();
             // judgement 1 == "FFD237"
             beatMap.Notes.Add(new Note(timeStamp: 2000, column: 2, duration: 0, judgementStart: 1));
@@ -46,7 +48,7 @@ public class RendererTests
                 Assert.Equal(3960, result.WindowSize);
                 Assert.Equal(2, result.WindowCount); // ceil((6000 - 960) / 3000)
                 Assert.Equal(2, result.ImageCount);
-                Assert.Equal(150, result.WindowFrameCount);
+                Assert.Equal(150 * fps / 60, result.WindowFrameCount);
                 Assert.Equal(Path.Combine(temp, "v_0.png"), result.ImagePaths[0]);
                 Assert.Equal(Path.Combine(temp, "v_1.png"), result.ImagePaths[1]);
             }

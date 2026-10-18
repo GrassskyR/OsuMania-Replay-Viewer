@@ -11,6 +11,10 @@ namespace ManiaReplayMaster.Core.Model;
 /// </summary>
 public sealed class Config
 {
+    /// <summary>Speed retains its original pixels-per-frame scale at 60 FPS.</summary>
+    public const int ScrollReferenceFrameRate = 60;
+
+    /// <summary>Scroll speed in units of 60 pixels per second, independent of output FPS.</summary>
     public int Speed = 20;
     public int Width = 540;
     public int Height = 960;
@@ -63,7 +67,7 @@ public sealed class Config
     public static Config Instance { get; set; } = new();
 
     public static readonly string DefaultSetting = """
-        # Falling down speed, in pixel / frame
+        # Falling down speed, in 60 pixels / second (independent of FPS)
         speed: 20
 
         # FPS: frame / second

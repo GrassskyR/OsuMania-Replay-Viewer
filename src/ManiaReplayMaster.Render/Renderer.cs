@@ -18,16 +18,19 @@ namespace ManiaReplayMaster.Render;
 /// model exactly: the canvas is <c>gameWidth x (stepSize + height)</c>, it is cleared to black on
 /// every iteration, and the slices are written as <c>name_0.png</c>, <c>name_1.png</c>, ...
 ///
-/// Geometry (all copied verbatim from the reference):
+/// Geometry uses the original speed scale at 60 FPS, independent of the output frame rate.
+/// Slice boundaries align to both whole pixels and whole frames so fractional frame movement
+/// does not introduce jumps when the encoder switches strips.
 /// <code>
-/// pixelPerFrame   = Config.speed
-/// timeHeightRatio = speed / 1000.0 * framePerSecond
+/// pixelsPerSecond = Config.speed * 60
+/// timeHeightRatio = pixelsPerSecond / 1000.0
 /// timeToHeight(t) = t * timeHeightRatio
 /// heightToTime(h) = h / timeHeightRatio
 /// gameWidth       = (isTaiko &amp;&amp; taikoSingleColumn) ? width / 4 : width
 /// columnWidth     = Config.width / key          // deliberately Config.width, not gameWidth
-/// totalHeight     = ensureMultiple(timeToHeight(duration), speed)
-/// stepSize        = ensureMultiple(maxStepSize, pixelPerFrame)
+/// pixelAlignment  = pixelsPerSecond / gcd(pixelsPerSecond, framePerSecond)
+/// totalHeight     = ensureMultiple(timeToHeight(duration), pixelAlignment)
+/// stepSize        = ensureMultiple(maxStepSize, pixelAlignment)
 /// windowSize      = stepSize + Config.height
 /// </code>
 ///
@@ -56,7 +59,7 @@ public sealed class Renderer : IDisposable
     private readonly Config _config;
     private readonly PortLogger _log;
 
-    private readonly int _pixelPerFrame;
+    private readonly int _windowFrameCount;
     private readonly double _timeHeightRatio;
     private readonly int _gameHeight;
     private readonly int _gameWidth;
@@ -81,13 +84,18 @@ public sealed class Renderer : IDisposable
         _config = config ?? Config.Instance;
         _log = log ?? PortLogger.FromConfig(_config);
 
-        _pixelPerFrame = _config.Speed;
-        _timeHeightRatio = _pixelPerFrame / 1000.0 * _config.FramePerSecond;
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(_config.Speed);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(_config.FramePerSecond);
+        var pixelsPerSecond = checked(_config.Speed * Config.ScrollReferenceFrameRate);
+        var divisor = GreatestCommonDivisor(pixelsPerSecond, _config.FramePerSecond);
+        var pixelAlignment = pixelsPerSecond / divisor;
+        _timeHeightRatio = pixelsPerSecond / 1000.0;
         _gameHeight = _config.Height;
         _gameWidth = _beatMap.IsTaiko && _config.TaikoSingleColumn ? _config.Width / 4 : _config.Width;
         _columnWidth = _config.Width / _beatMap.Key;
-        _totalHeight = EnsureMultiple(TimeToHeight(_beatMap.Duration), _config.Speed);
-        _stepSize = EnsureMultiple(_config.MaxStepSize, _pixelPerFrame);
+        _totalHeight = EnsureMultiple(TimeToHeight(_beatMap.Duration), pixelAlignment);
+        _stepSize = EnsureMultiple(_config.MaxStepSize, pixelAlignment);
+        _windowFrameCount = checked(_stepSize / pixelAlignment * (_config.FramePerSecond / divisor));
         _windowSize = _stepSize + _gameHeight;
 
         // Every slice is cleared to opaque black; an alpha channel only adds PNG work.
@@ -101,7 +109,7 @@ public sealed class Renderer : IDisposable
     /// <summary>Height of one long-strip PNG, i.e. <c>stepSize + Config.height</c>.</summary>
     public int WindowSize => _windowSize;
 
-    /// <summary><c>ensureMultiple(timeToHeight(duration), speed)</c>.</summary>
+    /// <summary>Duration expressed in pixels, rounded up to a whole-frame boundary.</summary>
     public int TotalHeight => _totalHeight;
 
     /// <summary>Canvas width.</summary>
@@ -113,8 +121,8 @@ public sealed class Renderer : IDisposable
     /// <summary><c>Config.width / key</c>.</summary>
     public int ColumnWidth => _columnWidth;
 
-    /// <summary><c>stepSize / pixelPerFrame</c> (integer division).</summary>
-    public int WindowFrameCount => _stepSize / _pixelPerFrame;
+    /// <summary>Exact number of output frames covering one scroll step.</summary>
+    public int WindowFrameCount => _windowFrameCount;
 
     /// <summary>
     /// Port of <c>Render.start()</c>: writes the PNG slices and returns the values the encoder needs.
@@ -196,6 +204,13 @@ public sealed class Renderer : IDisposable
     }
 
     // ---------------------------------------------------------------- geometry helpers
+
+    private static int GreatestCommonDivisor(int a, int b)
+    {
+        while (b != 0)
+            (a, b) = (b, a % b);
+        return a;
+    }
 
     /// <summary>Kotlin: <c>ceil(x / base).toInt() * base</c>.</summary>
     private static int EnsureMultiple(double x, int baseValue)
