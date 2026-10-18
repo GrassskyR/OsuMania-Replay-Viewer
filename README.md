@@ -99,6 +99,8 @@ NuGet 默认从 nuget.org 恢复，依赖包不纳入源码管理。离线环境
 ./build.ps1 appcheck                      # 交互桌面上的 GUI 判定冒烟检查
 ```
 
+导出阶段计时与 .NET 调用栈采样见 [性能分析工具](tools/profile/README.md)。它会记录判定、绘图、编码耗时、托管分配和 FFmpeg 日志，便于用同一份输入比较优化前后的性能。
+
 `memory32` 自动发布自包含 x86 测试进程，无需另装 x86 .NET。GUI 与真实游戏检查按需手动运行；截图写入 `out/appcheck/`。GitHub Actions 在 Windows 上执行构建、单元测试、合成内存检查、FFmpeg 测试和自包含发布，并保留构建产物。
 
 ### 发布 GitHub Release
@@ -129,7 +131,7 @@ Release 包含 `ManiaReplayViewer-win-x64.zip`（自包含目录版）和 `Mania
 | `tools/` | 可复用的 GUI 与游戏诊断工具 |
 | `docs/FORMATS.md` | 数据库布局及内存读取维护说明 |
 
-渲染器按时间窗口生成静态长图，再由 FFmpeg 按帧滚动、拼接并合成音频。滚动合成采用 YUV 4:4:4，最终输出常用的 YUV 4:2:0，避免奇数流速导致位移交替跳动。
+渲染器按时间窗口生成不含透明通道的静态长图，再由 FFmpeg 按帧裁取可见区域、拼接并合成音频。裁剪采用 YUV 4:4:4，最终输出常用的 YUV 4:2:0，避免奇数流速导致位移交替跳动。
 
 `Pipeline.Prepare` 接受独立配置，完成谱面定位、解析与判定；`PipelineSnapshot.Create` 将已有判定结果转换为诊断快照。`RenderExporter.Run` 串联判定、绘图与编码，直接将渲染结果中的图片列表交给编码器。编码器负责分段、合并及 GPU 失败回退，界面负责异步任务与取消状态。
 

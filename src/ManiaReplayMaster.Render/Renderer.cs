@@ -13,8 +13,8 @@ namespace ManiaReplayMaster.Render;
 /// Port of <c>me.replaymaster.Render</c> (Kotlin/AWT -&gt; C#/GDI+).
 ///
 /// The original does NOT render video frames: for every "window" it draws one tall static strip
-/// containing all notes of that time window, and <c>ffmpeg</c> later scrolls it with an
-/// <c>overlay=y=-h+H+t*...</c> expression (rewrite plan §1.1.1, route E1). This port keeps that
+/// containing the notes of that time window, and <c>ffmpeg</c> later crops the scrolling viewport
+/// from it (rewrite plan §1.1.1, route E1). This port keeps that
 /// model exactly: the canvas is <c>gameWidth x (stepSize + height)</c>, it is cleared to black on
 /// every iteration, and the slices are written as <c>name_0.png</c>, <c>name_1.png</c>, ...
 ///
@@ -66,6 +66,8 @@ public sealed class Renderer : IDisposable
     private readonly int _windowSize;
 
     private readonly Bitmap _bufferedImage;
+    private readonly Dictionary<int, SolidBrush> _brushes = new();
+    private readonly Dictionary<(int Color, int Stroke), Pen> _pens = new();
     private Font? _timestampFont;
     private bool _disposed;
 
@@ -87,7 +89,8 @@ public sealed class Renderer : IDisposable
         _stepSize = EnsureMultiple(_config.MaxStepSize, _pixelPerFrame);
         _windowSize = _stepSize + _gameHeight;
 
-        _bufferedImage = new Bitmap(_gameWidth, _windowSize, PixelFormat.Format32bppArgb);
+        // Every slice is cleared to opaque black; an alpha channel only adds PNG work.
+        _bufferedImage = new Bitmap(_gameWidth, _windowSize, PixelFormat.Format24bppRgb);
     }
 
     /// <summary>Scroll step between two windows, i.e. one window's worth of pixels.</summary>
@@ -246,8 +249,7 @@ public sealed class Renderer : IDisposable
     /// <summary>Kotlin <c>clear()</c>: the whole canvas becomes opaque black.</summary>
     private void Clear(Graphics graphics)
     {
-        using var brush = new SolidBrush(Color.Black);
-        graphics.FillRectangle(brush, 0, 0, _bufferedImage.Width, _bufferedImage.Height);
+        graphics.FillRectangle(GetBrush(Color.Black), 0, 0, _bufferedImage.Width, _bufferedImage.Height);
     }
 
     /// <summary>Taiko multi-column background stripes (blue, blue, red -- in that order).</summary>
@@ -256,16 +258,10 @@ public sealed class Renderer : IDisposable
         var w = _bufferedImage.Width / _beatMap.Key;
         var padding = _bufferedImage.Width - w * 4;
 
-        using (var blue = new SolidBrush(ReadColor(_config.TaikoBackgroundBlue)))
-        {
-            graphics.FillRectangle(blue, padding, 0, w, _bufferedImage.Height);
-            graphics.FillRectangle(blue, padding + w * 3, 0, w, _bufferedImage.Height);
-        }
-
-        using (var red = new SolidBrush(ReadColor(_config.TaikoBackgroundRed)))
-        {
-            graphics.FillRectangle(red, padding + w, 0, w * 2, _bufferedImage.Height);
-        }
+        var blue = GetBrush(ReadColor(_config.TaikoBackgroundBlue));
+        graphics.FillRectangle(blue, padding, 0, w, _bufferedImage.Height);
+        graphics.FillRectangle(blue, padding + w * 3, 0, w, _bufferedImage.Height);
+        graphics.FillRectangle(GetBrush(ReadColor(_config.TaikoBackgroundRed)), padding + w, 0, w * 2, _bufferedImage.Height);
     }
 
     /// <summary>
@@ -290,6 +286,34 @@ public sealed class Renderer : IDisposable
 
     // ---------------------------------------------------------------- drawing primitives
 
+    private SolidBrush GetBrush(Color color)
+    {
+        var key = color.ToArgb();
+        if (!_brushes.TryGetValue(key, out var brush))
+        {
+            brush = new SolidBrush(color);
+            _brushes.Add(key, brush);
+        }
+        return brush;
+    }
+
+    private Pen GetPen(Color color, int stroke)
+    {
+        var key = (color.ToArgb(), stroke);
+        if (!_pens.TryGetValue(key, out var pen))
+        {
+            pen = new Pen(color, stroke * 2 - 1)
+            {
+                StartCap = LineCap.Square,
+                EndCap = LineCap.Square,
+                LineJoin = LineJoin.Miter,
+                Alignment = PenAlignment.Center
+            };
+            _pens.Add(key, pen);
+        }
+        return pen;
+    }
+
     /// <summary>
     /// Port of the reference's <c>rectangle(p1, p2, color, strokeWidth, filledColor)</c>: the two
     /// corners are normalised with <c>abs</c>/<c>min</c>, and <c>strokeWidth == -1</c> means
@@ -303,28 +327,24 @@ public sealed class Renderer : IDisposable
         var h = Math.Abs(y2 - y1);
         var x = Math.Min(x1, x2);
         var y = Math.Min(y1, y2);
+        var margin = Math.Max(0, strokeWidth) + 1;
+        if (x + w < -margin || y + h < -margin || x > _gameWidth + margin || y > _windowSize + margin)
+        {
+            return;
+        }
 
         if (strokeWidth != -1)
         {
             if (filledColor is not null)
             {
-                using var fillBrush = new SolidBrush(filledColor.Value);
-                graphics.FillRectangle(fillBrush, x, y, w, h);
+                graphics.FillRectangle(GetBrush(filledColor.Value), x, y, w, h);
             }
 
-            using var pen = new Pen(color, strokeWidth * 2 - 1)
-            {
-                StartCap = LineCap.Square,
-                EndCap = LineCap.Square,
-                LineJoin = LineJoin.Miter,
-                Alignment = PenAlignment.Center
-            };
-            graphics.DrawRectangle(pen, x, y, w, h);
+            graphics.DrawRectangle(GetPen(color, strokeWidth), x, y, w, h);
         }
         else
         {
-            using var brush = new SolidBrush(color);
-            graphics.FillRectangle(brush, x, y, w, h);
+            graphics.FillRectangle(GetBrush(color), x, y, w, h);
         }
     }
 
@@ -338,28 +358,24 @@ public sealed class Renderer : IDisposable
         Color? filledColor = null)
     {
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var margin = r + Math.Max(0, strokeWidth) + 1;
+        if (px < -margin || py < -margin || px > _gameWidth + margin || py > _windowSize + margin)
+        {
+            return;
+        }
 
         if (strokeWidth != -1)
         {
             if (filledColor is not null)
             {
-                using var fillBrush = new SolidBrush(filledColor.Value);
-                graphics.FillEllipse(fillBrush, px - r, py - r, 2 * r, 2 * r);
+                graphics.FillEllipse(GetBrush(filledColor.Value), px - r, py - r, 2 * r, 2 * r);
             }
 
-            using var pen = new Pen(color, strokeWidth * 2 - 1)
-            {
-                StartCap = LineCap.Square,
-                EndCap = LineCap.Square,
-                LineJoin = LineJoin.Miter,
-                Alignment = PenAlignment.Center
-            };
-            graphics.DrawEllipse(pen, px - r, py - r, 2 * r, 2 * r);
+            graphics.DrawEllipse(GetPen(color, strokeWidth), px - r, py - r, 2 * r, 2 * r);
         }
         else
         {
-            using var brush = new SolidBrush(color);
-            graphics.FillEllipse(brush, px - r, py - r, 2 * r, 2 * r);
+            graphics.FillEllipse(GetBrush(color), px - r, py - r, 2 * r, 2 * r);
         }
     }
 
@@ -437,18 +453,10 @@ public sealed class Renderer : IDisposable
     {
         _timestampFont ??= CreateTimestampFont();
         var font = _timestampFont;
-        var brush = new SolidBrush(color);
-        try
-        {
-            var ascent = GetAscent(font);
-            graphics.DrawString(text, font, brush,
-                ToInt(x + _config.Stroke), ToInt(y - _config.Stroke) - ascent,
-                StringFormat.GenericTypographic);
-        }
-        finally
-        {
-            brush.Dispose();
-        }
+        var ascent = GetAscent(font);
+        graphics.DrawString(text, font, GetBrush(color),
+            ToInt(x + _config.Stroke), ToInt(y - _config.Stroke) - ascent,
+            StringFormat.GenericTypographic);
     }
 
     /// <summary>AWT's default is <c>Font("Dialog", PLAIN, 12)</c> evaluated at 72 dpi, so 12 pixels.</summary>
@@ -489,7 +497,10 @@ public sealed class Renderer : IDisposable
             h = y;
         }
 
-        var currentH = actionHeight * 2;
+        if (y - h > _windowSize || y < 0) return;
+        // Keep the original dash phase, but jump over dashes below the canvas.
+        var dashStep = actionHeight * 2;
+        var currentH = Math.Max(dashStep, (y - _windowSize - actionHeight) / dashStep * dashStep);
         while (currentH + actionHeight <= h)
         {
             RoundedRect(graphics,
@@ -612,6 +623,8 @@ public sealed class Renderer : IDisposable
         }
 
         _disposed = true;
+        foreach (var pen in _pens.Values) pen.Dispose();
+        foreach (var brush in _brushes.Values) brush.Dispose();
         _timestampFont?.Dispose();
         _bufferedImage.Dispose();
     }

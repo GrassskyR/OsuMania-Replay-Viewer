@@ -67,12 +67,7 @@ public sealed record FfmpegMergeRequest
 /// Builds the ffmpeg argv of the reference implementation (rewrite plan route E1), with
 /// documented compatibility and pixel-alignment fixes.
 ///
-/// These methods are pure and deliberately public: the ffmpeg command line -- in particular the
-/// whole <c>-filter_complex</c> string -- is the highest-value regression surface of this layer,
-/// and it can be pinned by a test without running ffmpeg at all.
-///
-/// The returned lists do NOT include the ffmpeg executable itself; <see cref="Encoder"/> prepends
-/// it exactly like the reference's <c>command.add(0, ffmpegPath)</c>.
+/// The returned argument lists do not include the FFmpeg executable itself.
 ///
 /// Single passes concatenate raw frames; multi-pass exports stream-copy the encoded slices
 /// through the concat demuxer and apply audio tempo/delay only once at the final merge.
@@ -96,9 +91,8 @@ public static class FfmpegCommandBuilder
         var outVideos = new List<string>();
         var count = request.ImagePaths.Count;
         var isTaikoSuffix = request.IsTaiko ? ",transpose=1" : string.Empty;
-        // Round the time back to a whole frame before applying the pixel step: floating-point
-        // t * fps * speed can land just below an integer and intermittently lose one pixel.
-        var overlayScroll = FormattableString.Invariant($"round(t*{request.FramePerSecond})*{request.Speed}");
+        // Crop's frame index is an integer; time-based expressions can lose a pixel to rounding.
+        var scroll = FormattableString.Invariant($"n*{request.Speed}");
 
         for (var i = 0; i < count; i++)
         {
@@ -107,13 +101,11 @@ public static class FfmpegCommandBuilder
 
             // Everything numeric is formatted with the invariant culture: the filter graph must not
             // depend on the machine's decimal separator or digit shapes.
+            // Rendered strips are opaque and cover the entire viewport. Moving a crop over
+            // them produces the same frames without generating and blending a black canvas.
+            // Keep 4:4:4 until after cropping so odd scroll speeds retain exact chroma positions.
             filterGraph.Add(FormattableString.Invariant(
-                $"color=s={request.GameWidth}*{request.GameHeight},fps={request.FramePerSecond}[bg{i}]"));
-            // A 4:2:0 overlay rounds y to even pixels, causing odd scroll speeds (e.g. 29)
-            // to alternate between 28 and 30 pixels per frame. Composite in 4:4:4 first;
-            // convert to playback-compatible 4:2:0 only when encoding the finished frame.
-            filterGraph.Add(FormattableString.Invariant(
-                $"[bg{i}][{inputFileIndex}]overlay=y=-h+H+{overlayScroll}:shortest=1:format=yuv444[video{i}l]"));
+                $"[{inputFileIndex}]format=yuv444p,fps={request.FramePerSecond},crop=w={request.GameWidth}:h={request.GameHeight}:x=0:y=ih-oh-{scroll}:exact=1[video{i}l]"));
             filterGraph.Add(
                 $"[video{i}l]trim=end={JavaDouble.ToString(request.SliceDuration)}{isTaikoSuffix}[video{i}]");
 

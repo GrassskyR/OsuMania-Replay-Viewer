@@ -92,7 +92,7 @@ public class EncoderFailureTests
     private static string WriteSingleSlice(string directory)
     {
         var imagePath = Path.Combine(directory, "v.png");
-        using (var bitmap = new Bitmap(64, 64, PixelFormat.Format32bppArgb))
+        using (var bitmap = new Bitmap(540, 3960, PixelFormat.Format32bppArgb))
         {
             using (var graphics = Graphics.FromImage(bitmap))
             {
