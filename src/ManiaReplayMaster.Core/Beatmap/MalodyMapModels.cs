@@ -16,16 +16,10 @@ public sealed class McModel
 
     [JsonPropertyName("note")] public List<McNote> Note { get; set; } = new();
 
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        NumberHandling = JsonNumberHandling.AllowReadingFromString
-    };
-
     public static McModel Load(string path)
     {
         var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<McModel>(json, Options)
+        return JsonSerializer.Deserialize(json, MalodyJsonContext.Default.McModel)
                ?? throw new InvalidDataException("Empty .mc document.");
     }
 }

@@ -191,7 +191,7 @@ public sealed class BeatmapLocator
         try
         {
             using var stream = File.OpenRead(CachePath);
-            var cache = JsonSerializer.Deserialize<SongsIndexCache>(stream);
+            var cache = JsonSerializer.Deserialize(stream, GameJsonContext.Default.SongsIndexCache);
             if (cache is null || cache.SchemaVersion != SongsIndexCache.CurrentSchemaVersion)
             {
                 return false;
@@ -277,7 +277,7 @@ public sealed class BeatmapLocator
             }
 
             var tmp = CachePath + ".tmp";
-            File.WriteAllText(tmp, JsonSerializer.Serialize(cache, new JsonSerializerOptions { WriteIndented = false }));
+            File.WriteAllText(tmp, JsonSerializer.Serialize(cache, GameJsonContext.Default.SongsIndexCache));
             File.Move(tmp, CachePath, overwrite: true);
         }
         catch
@@ -534,7 +534,7 @@ public sealed class BeatmapLocator
             try
             {
                 using var stream = File.OpenRead(CachePath);
-                var cache = JsonSerializer.Deserialize<SongsIndexCache>(stream);
+                var cache = JsonSerializer.Deserialize(stream, GameJsonContext.Default.SongsIndexCache);
                 if (cache is not null && cache.SchemaVersion == SongsIndexCache.CurrentSchemaVersion)
                 {
                     if (!string.IsNullOrEmpty(cache.Root)

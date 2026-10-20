@@ -615,7 +615,7 @@ public sealed class ReplayResolver
         try
         {
             using var stream = File.OpenRead(CachePath);
-            var cache = JsonSerializer.Deserialize<ReplayHeaderIndexCache>(stream);
+            var cache = JsonSerializer.Deserialize(stream, GameJsonContext.Default.ReplayHeaderIndexCache);
             if (cache is null || cache.SchemaVersion != ReplayHeaderIndexCache.CurrentSchemaVersion)
             {
                 return empty;
@@ -679,7 +679,7 @@ public sealed class ReplayResolver
 
             Directory.CreateDirectory(Path.GetDirectoryName(CachePath)!);
             var tmp = CachePath + ".tmp";
-            File.WriteAllText(tmp, JsonSerializer.Serialize(cache));
+            File.WriteAllText(tmp, JsonSerializer.Serialize(cache, GameJsonContext.Default.ReplayHeaderIndexCache));
             File.Move(tmp, CachePath, overwrite: true);
         }
         catch

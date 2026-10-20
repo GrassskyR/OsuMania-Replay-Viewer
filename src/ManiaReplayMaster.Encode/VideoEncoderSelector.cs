@@ -12,6 +12,18 @@ public sealed record EncoderSelection(string Codec, string Preset, bool IsFallba
 /// <summary>Tests actual encoder initialization; an FFmpeg encoder listing alone cannot verify a GPU or driver.</summary>
 public static class VideoEncoderSelector
 {
+    private static readonly string[] HardwareCodecs = ["h264_nvenc", "h264_qsv", "h264_amf"];
+
+    /// <summary>Lists every encoder that can initialize, rather than stopping at the first working GPU.</summary>
+    public static IReadOnlyList<string> Available(Func<EncoderSelection, bool> probe)
+        => new[] { "libx264" }.Concat(HardwareCodecs)
+            .Where(codec => probe(new EncoderSelection(codec, DefaultPreset(codec))))
+            .ToArray();
+
+    public static IReadOnlyList<string> DetectAvailable(string ffmpegPath, PortLogger log,
+        CancellationToken cancellationToken = default)
+        => Available(selection => Probe(ffmpegPath, 540, 960, 60, selection, log, cancellationToken));
+
     public static bool IsAutomatic(string codec) => string.Equals(codec.Trim(), "auto", StringComparison.OrdinalIgnoreCase);
 
     public static string DefaultPreset(string codec) => codec switch
@@ -32,7 +44,7 @@ public static class VideoEncoderSelector
         }
 
         // Auto mode owns the preset as well: CPU presets such as ultrafast are invalid for NVENC/AMF.
-        foreach (var candidate in new[] { "h264_nvenc", "h264_qsv", "h264_amf" })
+        foreach (var candidate in HardwareCodecs)
         {
             var selection = new EncoderSelection(candidate, DefaultPreset(candidate));
             if (probe(selection)) return selection;

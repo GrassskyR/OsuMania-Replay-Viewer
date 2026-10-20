@@ -6,7 +6,7 @@ using static ManiaReplayMaster.App.Localization.Localizer;
 namespace ManiaReplayMaster.App;
 
 /// <summary>What auto-detection produced, in UI-friendly terms.</summary>
-internal sealed class AutoDetectResult
+public sealed class AutoDetectResult
 {
     public string? ReplayPath { get; init; }
 
@@ -20,7 +20,7 @@ internal sealed class AutoDetectResult
     public bool HasAny => ReplayPath is not null || BeatmapPath is not null;
 }
 
-internal sealed class CandidateItem
+public sealed class CandidateItem
 {
     public required string ReplayPath { get; init; }
 

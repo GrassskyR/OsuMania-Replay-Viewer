@@ -26,7 +26,8 @@
   <data name="Height" xml:space="preserve"><value>Height</value></data>
   <data name="FPS" xml:space="preserve"><value>FPS</value></data>
   <data name="Codec" xml:space="preserve"><value>Codec</value></data>
-  <data name="Codec.Tooltip" xml:space="preserve"><value>auto tests NVIDIA NVENC, Intel QSV and AMD AMF, then falls back to CPU. libx264 forces CPU encoding. Your choice is saved.</value></data>
+  <data name="Codec.Tooltip" xml:space="preserve"><value>Open the list to select a detected encoder, or type a custom name. The default is libx264 (CPU). auto tests NVENC, QSV and AMF, then falls back to CPU. Your choice is saved.</value></data>
+  <data name="Log.EncoderDetectionFailed" xml:space="preserve"><value>Unable to detect encoders: {0}. You can still enter an encoder manually.</value></data>
   <data name="Preset.Tooltip" xml:space="preserve"><value>Choose a preset for the selected encoder, ordered from fastest to slowest. auto selects a fast preset. When codec is auto, the preset is also selected automatically.</value></data>
   <data name="Log.EncoderSelected" xml:space="preserve"><value>Video encoder: {0}, preset: {1}.</value></data>
   <data name="Log.EncoderFallback" xml:space="preserve"><value>GPU encoding is unavailable or failed; using CPU (libx264 / ultrafast).</value></data>

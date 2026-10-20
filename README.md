@@ -1,6 +1,6 @@
 # Mania Replay Viewer
 
-将 osu!mania、osu!taiko 和 Malody 的回放渲染为 MP4 视频的 Windows 工具。基于 C# / .NET 8 + WPF 构建。
+将 osu!mania、osu!taiko 和 Malody 的回放渲染为 MP4 视频的 Windows 工具。基于 C# / .NET 10；新增 Avalonia Native AOT 桌面入口，保留 WPF 入口供行为回归。
 
 ## 功能
 
@@ -12,26 +12,32 @@
 
 ## 使用说明
 
-支持 **Windows 10/11 x64**。直接下载 Release 包解压即可运行（已自带 .NET 运行时和 `ffmpeg.exe`，请勿删除同目录下的 FFmpeg）。
+支持 **Windows 10/11 x64**。Native AOT 包 `ManiaReplayViewer-win-x64-aot.zip` 解压后运行，无需安装 .NET；请保留同目录的全部本机 DLL、`ffmpeg.exe` 与许可证，支持离线导出。旧 WPF 包仍自带 .NET 运行时。
 
-1. 启动 `ManiaReplayMaster.exe`。
+1. AOT 包启动 `ManiaReplayViewer.exe`；旧 WPF 包启动 `ManiaReplayMaster.exe`。
 2. **加载回放**：拖入 `.osr` / `.mr` 文件。osu! 谱面会根据 MD5 自动定位，找不到时需手动选择 `.osu` / `.osz`（Malody 对应 `.mc` / `.mcz`）。
    - *自动联动*：打开 osu!stable 并开启界面的自动检测，进入成绩结算画面即可自动加载（仅支持 stable，不支持 lazer，且本地需有对应 `.osr` 文件）。
-3. **导出**：调整参数后点击“渲染”。勾选“仅判定”可跳过视频生成，直接查看判定统计。
+3. **导出**：调整参数后点击“渲染视频”。点击“仅判定”可跳过视频生成，直接查看判定统计。
 
 ### 补充说明
 
 - **流速计算**：流速 `1` 对应 `60 像素/秒`（如默认流速 `20` = `1200 像素/秒`），调高 FPS 仅提升流畅度，不改变下落速度。
-- **硬件编码**：默认 `auto` 会在导出前按 `NVENC → QSV → AMF → CPU (libx264)` 顺序实测可用编码器。随包附带的 FFmpeg 9.0.2 要求 NVIDIA 驱动 **610.00+** 才能启用 NVENC，旧驱动请更新驱动或自行替换旧版 FFmpeg。
+- **编码器选择**：默认为 `libx264`（CPU）。界面右侧箭头可展开选择后台试编码检测到的硬件编码器，也可手动输入；已保存的选择会保留。选择 `auto` 时，导出前按 `NVENC → QSV → AMF → CPU (libx264)` 顺序检测。随包附带的 FFmpeg 9.0.2 要求 NVIDIA 驱动 **610.00+** 才能启用 NVENC，旧驱动请更新驱动或自行替换旧版 FFmpeg。
 - **配置文件**：保存在 `%LOCALAPPDATA%/ManiaReplayViewer/ui-settings.json`，崩溃日志见同目录的 `crash.log`。
 
 ## 构建与开发
 
-需要 [.NET 8 SDK x64](https://dotnet.microsoft.com/download/dotnet/8.0)（8.0.404+）和 PowerShell。发布脚本会自动下载并缓存 FFmpeg 9.0.2。
+需要 [.NET 10 SDK x64](https://dotnet.microsoft.com/download/dotnet/10.0)（global.json 锁定 10.0.402）、PowerShell；Native AOT 编译还需 Visual Studio 2022+ 的 C++ 桌面生成工具和 Windows SDK。打包/原生回归需 Python 3。发布脚本自动下载并校验 FFmpeg 9.0.2。用 `-DotnetPath <x64-dotnet.exe>` 指定 SDK，避免误用 PATH 中的 x86 SDK。
 
 ```powershell
 ./build.ps1 build          # Release 构建
-./build.ps1 app            # 构建并启动 GUI
+./build.ps1 desktop        # Avalonia 开发入口（JIT）
+./build.ps1 publish-aot    # 全新 staging 原生发布及 ZIP (artifacts/win-x64-aot/)
+./build.ps1 app-aot        # 发布并启动 Native AOT GUI
+./build.ps1 aotcheck       # 发布并运行原生 CLI/渲染/缓存/x86 内存回归
+./build.ps1 appcheck-aot   # 对发布的原生 GUI 做 UI Automation 冒烟
+./build.ps1 appcheck-headless # 无系统窗口的编码器菜单回归
+./build.ps1 app            # 保留的 WPF 参照入口
 ./build.ps1 test           # 运行单元测试（无需 FFmpeg）
 ./build.ps1 e2e            # 运行视频导出等端到端测试（需 FFmpeg）
 ./build.ps1 publish        # 发布自包含目录 (artifacts/win-x64/)
@@ -50,6 +56,16 @@
 
 在 GitHub Actions 中手动运行 **Windows release**，选择分支并填写版本 tag（如 `v0.1.0`）。如果 tag 尚不存在，会构建本次运行所选分支的提交，通过测试后创建 tag 和 Release；如果 tag 已存在，则构建该 tag 对应的提交。推送 `v*` tag 也会自动触发发布。
 
+### Native AOT 验收与排错
+
+实施证据、完整体积对比及未覆盖环境见 [迁移结果](docs/NATIVE-AOT-MIGRATION-RESULTS.md)。默认 `app/publish` 暂保留 WPF，待干净 Windows 无 .NET 环境等最终验收通过后再切换。Native AOT 并非只有一个 EXE：Skia、HarfBuzz 与 ANGLE 本机 DLL 属于 UI 依赖。缺少 DLL 时请重新完整解压；发布环境找不到 link.exe/Windows SDK 时安装 C++ 桌面生成工具。
+
+`publish-aot` 只打包新 staging；目录、ZIP 和清单全部通过审计后一起替换，替换失败时回滚。旧输出整套保留在 `artifacts/win-x64-aot.previous-*/`，不会删除其中的用户导出视频。导出目录可在界面修改，建议放在发布目录之外。ZIP 用 DEFLATE level 6，文件清单/体积/SHA-256 写入同名 `.measurements.json`。
+
+完整界面回归可运行 `./tools/appcheck/desktop-regression.ps1 -Exe "$PWD/artifacts/win-x64-aot/ManiaReplayViewer.exe"`，覆盖语言、原生文件选择、取消后重试和导出中关闭。它会暂时修改并恢复用户配置。无 .NET 验收可用 `./tools/appcheck/run-sandbox.ps1`；需要系统已提供 Windows Sandbox，网络在沙箱内关闭，结果写入 `out/aot-check/sandbox-*/`。`-PrepareOnly` 仅生成配置，不能算验收通过。
+
+不占用桌面的编码器菜单回归：`./build.ps1 appcheck-headless`。它通过 Avalonia Headless 加载实际界面，在内存中检查展开、选择与关闭，不创建系统窗口或发送鼠标/键盘输入；选择绑定使用隔离测试状态。build/release CI 均包含此检查，并在发布 AOT 包后运行原生诊断与 UI Automation 冒烟。
+
 ## 项目结构
 
 | 目录 | 说明 |
@@ -58,7 +74,9 @@
 | `src/ManiaReplayMaster.Render` | 音符长图生成（GDI+） |
 | `src/ManiaReplayMaster.Encode` | FFmpeg 裁剪合成与编码控制 |
 | `src/ManiaReplayMaster.Game` | osu! 数据库解析与内存读取 |
-| `src/ManiaReplayMaster.App` | WPF 界面 |
+| `src/ManiaReplayMaster.Desktop` | Avalonia 编译绑定 / Native AOT 界面 |
+| `src/ManiaReplayMaster.Presentation` | 共用状态、设置、游戏适配与本地化 |
+| `src/ManiaReplayMaster.App` | 保留的 WPF 参照界面 |
 | `src/ManiaReplayMaster.Cli` | 命令行解析与判定工具 |
 | `docs/FORMATS.md` | 数据库格式与内存偏移维护说明 |
 

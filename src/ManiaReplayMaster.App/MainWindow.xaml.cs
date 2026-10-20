@@ -19,11 +19,27 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _cts;
     private IReadOnlyList<CandidateItem>? _lastDetectedCandidates;
     private bool _updatingCandidates;
+    private readonly CancellationTokenSource _encoderDetectionCancellation = new();
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = _vm;
+        Loaded += async (_, _) =>
+        {
+            var token = _encoderDetectionCancellation.Token;
+            try
+            {
+                var codecs = await Task.Run(() => VideoEncoderSelector.DetectAvailable(FfmpegLocator.Locate(),
+                    new ManiaReplayMaster.Encode.Diagnostics.PortLogger(), token), token);
+                if (!token.IsCancellationRequested) _vm.AddAvailableCodecs(codecs);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+            catch (Exception ex)
+            {
+                if (!token.IsCancellationRequested) _vm.Log(Text("Log.EncoderDetectionFailed", ex.Message));
+            }
+        };
         Localizer.Current.PropertyChanged += OnLanguageChanged;
 
         _vm.InitialiseGameLink();
@@ -418,6 +434,7 @@ public partial class MainWindow : Window
         try
         {
             _detectTimer.Stop();
+            _encoderDetectionCancellation.Cancel();
             Localizer.Current.PropertyChanged -= OnLanguageChanged;
             _cts?.Cancel();
             _vm.Dispose();

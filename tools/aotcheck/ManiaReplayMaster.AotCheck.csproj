@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <AssemblyName>aotcheck</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTestProject>false</IsTestProject>
+    <OptimizationPreference>Size</OptimizationPreference>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Invoke existing behavioral tests directly: no reflection-based test discovery in AOT. -->
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <Using Include="Xunit" />
+    <Using Include="ManiaReplayMaster.TestSupport" />
+    <Compile Include="../../tests/ManiaReplayMaster.RenderEncode.Tests/*.cs" Exclude="../../tests/ManiaReplayMaster.RenderEncode.Tests/obj/**" Link="Checks/%(Filename)%(Extension)" />
+    <ProjectReference Include="../../src/ManiaReplayMaster.Render/ManiaReplayMaster.Render.csproj" />
+    <ProjectReference Include="../../src/ManiaReplayMaster.Game/ManiaReplayMaster.Game.csproj" />
+    <ProjectReference Include="../../src/ManiaReplayMaster.Presentation/ManiaReplayMaster.Presentation.csproj" />
+  </ItemGroup>
+</Project>

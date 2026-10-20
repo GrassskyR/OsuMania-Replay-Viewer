@@ -41,7 +41,7 @@ public sealed class UiSettings
     {
         if (_values["speed"] is JsonValue value && value.TryGetValue<int>(out var speed) && speed is >= 1 and <= 100)
             config.Speed = speed;
-        config.Codec = ReadString("codec") ?? "auto";
+        config.Codec = ReadString("codec") ?? "libx264";
         config.CodecPreset = ReadString("codecPreset") ?? "auto";
     }
 
@@ -74,7 +74,10 @@ public sealed class UiSettings
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_path))!);
-            File.WriteAllText(_path, _values.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true }))
+                _values.WriteTo(writer);
+            File.WriteAllBytes(_path, stream.ToArray());
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

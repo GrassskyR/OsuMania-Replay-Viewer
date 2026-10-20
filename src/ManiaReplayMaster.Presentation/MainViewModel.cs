@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Windows.Media;
 using ManiaReplayMaster.App.Localization;
 using static ManiaReplayMaster.App.Localization.Localizer;
 
@@ -13,9 +12,10 @@ namespace ManiaReplayMaster.App;
 /// parameter panel maps 1:1 onto the reference implementation's config (plan §1.4), and keeps the
 /// UI thread free while rendering runs on a worker.
 /// </summary>
-internal sealed class MainViewModel : INotifyPropertyChanged
+public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly GameBridge _game = new();
+    public Localizer L => Localizer.Current;
 
     public IReadOnlyList<CandidateItem>? DetectedCandidates { get; private set; }
 
@@ -28,6 +28,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         _height = config.Height;
         _framePerSecond = config.FramePerSecond;
         _codec = config.Codec;
+        if (!CodecChoices.Contains(_codec)) CodecChoices.Add(_codec);
         PresetChoices = GetPresetChoices(_codec, config.CodecPreset);
         _codecPreset = CanSelectPreset && PresetChoices.Contains(config.CodecPreset) ? config.CodecPreset : "auto";
         config.CodecPreset = _codecPreset;
@@ -118,8 +119,8 @@ internal sealed class MainViewModel : INotifyPropertyChanged
     public string GameStatusText => Text(!_gameInitialised ? "Status.Checking"
         : !_game.Available ? "Status.Unavailable" : _game.OsuFound ? "Status.Detected" : "Status.NotFound");
 
-    private Brush _gamePillBrush = (Brush)System.Windows.Application.Current.Resources["PillOff"];
-    public Brush GamePillBrush
+    private string _gamePillBrush = "#9AA0AD";
+    public string GamePillBrush
     {
         get => _gamePillBrush;
         set => Set(ref _gamePillBrush, value);
@@ -185,7 +186,14 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public IReadOnlyList<string> CodecChoices { get; } = new[] { "auto", "libx264", "h264_nvenc", "h264_qsv", "h264_amf" };
+    public ObservableCollection<string> CodecChoices { get; } = ["libx264", "auto"];
+
+    public void AddAvailableCodecs(IEnumerable<string> codecs)
+    {
+        // Preserve a saved/custom selection and its preset while detection finishes in the background.
+        foreach (var codec in codecs)
+            if (!CodecChoices.Contains(codec)) CodecChoices.Add(codec);
+    }
 
     public IReadOnlyList<string> PresetChoices { get; private set; } = ["auto"];
 
@@ -207,7 +215,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
 
     public bool CanSelectPreset => !string.Equals(Codec, "auto", StringComparison.OrdinalIgnoreCase);
 
-    private string _codec = "auto";
+    private string _codec = "libx264";
     public string Codec
     {
         get => _codec;
@@ -333,17 +341,17 @@ internal sealed class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(GameStatusText));
         if (_game.Available && _game.OsuFound)
         {
-            GamePillBrush = (Brush)System.Windows.Application.Current.Resources["PillOk"];
+            GamePillBrush = "#79D2A6";
             Log(Text("Game.Located", _game.OsuRoot));
         }
         else if (_game.Available)
         {
-            GamePillBrush = (Brush)System.Windows.Application.Current.Resources["PillWarn"];
+            GamePillBrush = "#E8BF6A";
             Log(Text("Game.NotFound"));
         }
         else
         {
-            GamePillBrush = (Brush)System.Windows.Application.Current.Resources["PillOff"];
+            GamePillBrush = "#9AA0AD";
             Log(_game.Detail);
         }
     }
@@ -431,7 +439,7 @@ internal sealed class MainViewModel : INotifyPropertyChanged
 
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != System.Windows.Data.Binding.IndexerName) return;
+        if (e.PropertyName != "Item[]") return;
         OnPropertyChanged(nameof(DetectedScoreText));
         OnPropertyChanged(nameof(GameStatusText));
         OnPropertyChanged(nameof(ProgressText));

@@ -1,0 +1,186 @@
+<Window x:Class="ManiaReplayMaster.Desktop.MainWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ManiaReplayMaster.App"
+        x:DataType="vm:MainViewModel" x:CompileBindings="True"
+        Title="Mania Replay Viewer" Height="820" Width="1080"
+        MinHeight="640" MinWidth="880"
+        FontFamily="Segoe UI" FontSize="12" UseLayoutRounding="True"
+        DragDrop.AllowDrop="True"
+        Background="#FF1E1E1E"
+        Foreground="{StaticResource TextPrimary}">
+
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <!-- Header + game status -->
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+      <TextBlock Text="Mania Replay Viewer" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock Text="{Binding L[Language.Label]}" Classes="label" Margin="0,0,8,0" />
+        <ComboBox x:Name="LanguageBox" AutomationProperties.AutomationId="LanguageBox" Width="140" Margin="0,0,12,0"
+                  SelectedIndex="0"
+                  ToolTip.Tip="{Binding L[Language.Tooltip]}">
+          <ComboBoxItem Tag="auto" Content="{Binding L[Language.System]}" />
+          <ComboBoxItem Tag="zh-Hans" Content="中文" />
+          <ComboBoxItem Tag="en" Content="English" />
+        </ComboBox>
+        <Border Background="{StaticResource ControlBackground}" BorderBrush="{StaticResource ControlBorder}"
+                BorderThickness="1" CornerRadius="3" Padding="10,5" Height="32">
+          <StackPanel Orientation="Horizontal">
+            <Ellipse Width="7" Height="7" Fill="{Binding GamePillBrush}" Margin="0,0,7,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="GameStatusLabel" AutomationProperties.AutomationId="GameStatusLabel" Text="{Binding GameStatusText}" FontSize="12" VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+
+    <!-- Inputs -->
+    <Border Grid.Row="1" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}"
+            BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,12,0,0">
+      <Grid RowSpacing="4">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding L[Replay.Label]}" Classes="label" />
+        <TextBox x:Name="ReplayBox" AutomationProperties.AutomationId="ReplayBox" Grid.Row="0" Grid.Column="1" Margin="0,0,6,0"
+                 Text="{Binding ReplayPath, Mode=TwoWay}" />
+        <Button x:Name="BrowseReplayButton" AutomationProperties.AutomationId="BrowseReplayButton" Grid.Row="0" Grid.Column="2" Content="{Binding L[Browse]}" Click="OnBrowseReplay" />
+        <Button Grid.Row="0" Grid.Column="3" AutomationProperties.AutomationId="LocateButton" Content="{Binding L[Locate]}" Click="OnLocateFromReplay" Margin="0"
+                ToolTip.Tip="{Binding L[Locate.Tooltip]}" />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding L[Beatmap.Label]}" Classes="label" />
+        <TextBox x:Name="BeatmapBox" AutomationProperties.AutomationId="BeatmapBox" Grid.Row="1" Grid.Column="1" Margin="0,0,6,0"
+                 Text="{Binding BeatmapPath, Mode=TwoWay}" />
+        <Button x:Name="BrowseBeatmapButton" AutomationProperties.AutomationId="BrowseBeatmapButton" Grid.Row="1" Grid.Column="2" Content="{Binding L[Browse]}" Click="OnBrowseBeatmap" />
+        <Button Grid.Row="1" Grid.Column="3" AutomationProperties.AutomationId="SwapButton" Content="{Binding L[Swap]}" Click="OnSwapPaths" Margin="0"
+                ToolTip.Tip="{Binding L[Swap.Tooltip]}" />
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding L[DetectedScore.Label]}" Classes="label" />
+        <Border Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Background="#FF2D2D30" CornerRadius="3"
+                Padding="8,5" Margin="0,2,0,4">
+          <DockPanel LastChildFill="True">
+            <ComboBox x:Name="ScoreCandidateBox" AutomationProperties.AutomationId="ScoreCandidateBox" DockPanel.Dock="Right" Width="260" Margin="8,0,0,0"
+                       SelectionChanged="OnCandidateSelected"
+                      ToolTip.Tip="{Binding L[Candidates.Tooltip]}">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:CandidateItem"><TextBlock Text="{Binding Display}" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Text="{Binding DetectedScoreText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          </DockPanel>
+        </Border>
+
+        <WrapPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="4" Margin="0,8,0,0">
+          <CheckBox x:Name="AutoDetectToggle" AutomationProperties.AutomationId="AutoDetectToggle" Content="{Binding L[AutoDetect]}" IsChecked="{Binding AutoDetectFromGame, Mode=TwoWay}"
+                    ToolTip.Tip="{Binding L[AutoDetect.Tooltip]}" />
+          <CheckBox Content="{Binding L[AutoStart]}" IsChecked="{Binding AutoStartRender, Mode=TwoWay}"
+                    ToolTip.Tip="{Binding L[AutoStart.Tooltip]}" />
+          <CheckBox Content="{Binding L[ReadMemory]}" IsChecked="{Binding MemoryEnabled, Mode=TwoWay}"
+                    ToolTip.Tip="{Binding L[ReadMemory.Tooltip]}" />
+          <CheckBox Content="{Binding L[DebugLogging]}" IsChecked="{Binding DebugLogging, Mode=TwoWay}" />
+        </WrapPanel>
+      </Grid>
+    </Border>
+
+    <!-- Parameters -->
+    <Border Grid.Row="2" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}"
+            BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,8,0,0">
+      <!-- Keep labels and editors on the same columns across both parameter rows. -->
+      <Grid ColumnDefinitions="Auto,*,Auto,140,Auto,140" RowSpacing="6">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding L[Speed]}" Classes="label" />
+        <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="*,30" Margin="0,0,12,0">
+          <Slider x:Name="SpeedSlider" AutomationProperties.AutomationId="SpeedSlider" Minimum="1" Maximum="100"
+                  IsSnapToTickEnabled="True" TickFrequency="1" ToolTip.Tip="{Binding L[Speed.Tooltip]}"
+                  Value="{Binding Speed, Mode=TwoWay}" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="1" Text="{Binding Speed}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+        </Grid>
+
+        <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding L[Width]}" Classes="label" />
+        <TextBox x:Name="WidthBox" AutomationProperties.AutomationId="WidthBox" Grid.Row="0" Grid.Column="3" Width="60" HorizontalAlignment="Left" Text="{Binding Width, Mode=TwoWay}" />
+
+        <TextBlock Grid.Row="0" Grid.Column="4" Text="{Binding L[Height]}" Classes="label" Margin="12,0,8,0" />
+        <TextBox x:Name="HeightBox" AutomationProperties.AutomationId="HeightBox" Grid.Row="0" Grid.Column="5" Width="60" HorizontalAlignment="Left" Text="{Binding Height, Mode=TwoWay}" />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding L[FPS]}" Classes="label" />
+        <TextBox x:Name="FpsBox" AutomationProperties.AutomationId="FpsBox" Grid.Row="1" Grid.Column="1" Width="60" HorizontalAlignment="Left"
+                 Text="{Binding FramePerSecond, Mode=TwoWay}" />
+        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding L[Codec]}" Classes="label" />
+        <Grid Grid.Row="1" Grid.Column="3">
+          <AutoCompleteBox x:Name="CodecBox" AutomationProperties.AutomationId="CodecBox" MinWidth="140" Padding="4,3,30,3"
+                  MinimumPrefixLength="0" FilterMode="None" IsTextCompletionEnabled="False" ItemsSource="{Binding CodecChoices}" ToolTip.Tip="{Binding L[Codec.Tooltip]}"
+                  Text="{Binding Codec, Mode=TwoWay}" />
+          <Button AutomationProperties.AutomationId="CodecDropDownButton" AutomationProperties.Name="{Binding L[Codec]}"
+                  Width="28" MinWidth="0" Height="30" MinHeight="0" Margin="1" Padding="0"
+                  HorizontalAlignment="Right" VerticalAlignment="Center" Focusable="False"
+                  Background="Transparent" BorderThickness="0" Click="OnCodecDropDown" ToolTip.Tip="{Binding L[Codec.Tooltip]}">
+            <Path Data="M 0 0 L 4 4 L 8 0" Stroke="{StaticResource TextPrimary}" StrokeThickness="1.5"
+                  Width="8" Height="4" />
+          </Button>
+        </Grid>
+        <TextBlock Grid.Row="1" Grid.Column="4" Text="{Binding L[Preset]}" Classes="label" Margin="12,0,8,0" />
+        <ComboBox x:Name="PresetBox" AutomationProperties.AutomationId="PresetBox" Grid.Row="1" Grid.Column="5" Width="140"
+                  ItemsSource="{Binding PresetChoices}" IsEnabled="{Binding CanSelectPreset}"
+                  ToolTip.Tip="{Binding L[Preset.Tooltip]}"
+                  SelectedItem="{Binding CodecPreset, Mode=TwoWay}" />
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding L[Output]}" Classes="label" />
+        <TextBox x:Name="OutputBox" AutomationProperties.AutomationId="OutputBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding OutputDir, Mode=TwoWay}" />
+        <Button Grid.Row="2" Grid.Column="4" Grid.ColumnSpan="2" AutomationProperties.AutomationId="OpenOutputButton" Content="{Binding L[OpenOutput]}" Margin="12,0,0,0" HorizontalAlignment="Stretch"
+                Click="OnOpenOutputDir" />
+      </Grid>
+    </Border>
+
+    <!-- Log -->
+    <Border Grid.Row="3" Background="#FF141414" BorderBrush="{StaticResource PanelBorder}"
+            BorderThickness="1" CornerRadius="4" Margin="0,8,0,0">
+      <ListBox x:Name="LogBox" AutomationProperties.AutomationId="LogBox" Background="Transparent" BorderThickness="0" Foreground="#FFCFCFCF"
+               FontFamily="Consolas" FontSize="12"
+               ScrollViewer.HorizontalScrollBarVisibility="Auto"
+               ItemsSource="{Binding LogLines}" />
+    </Border>
+
+    <!-- Progress -->
+    <Grid Grid.Row="4" Margin="0,8,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <ProgressBar Grid.Column="0" Height="18" Minimum="0" Maximum="100" Value="{Binding Progress}" />
+      <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                 Text="{Binding ProgressText}" MinWidth="180" />
+    </Grid>
+
+    <!-- Actions -->
+    <Grid Grid.Row="5" ColumnDefinitions="Auto,*" Margin="0,10,0,0">
+      <StackPanel Orientation="Horizontal">
+      <Button x:Name="RenderButton" AutomationProperties.AutomationId="RenderButton" Content="{Binding L[Render]}" Click="OnRender" IsEnabled="{Binding CanRender}" FontWeight="SemiBold" />
+      <Button x:Name="JudgeOnlyButton" AutomationProperties.AutomationId="JudgeOnlyButton" Content="{Binding L[JudgeOnly]}" Click="OnJudgeOnly" IsEnabled="{Binding CanRender}"
+              ToolTip.Tip="{Binding L[JudgeOnly.Tooltip]}" />
+      <Button x:Name="CancelButton" AutomationProperties.AutomationId="CancelButton" Content="{Binding L[Cancel]}" Click="OnCancel" IsEnabled="{Binding IsBusy}" />
+      </StackPanel>
+      <TextBlock x:Name="ResultText" AutomationProperties.AutomationId="ResultText" Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0"
+                 Text="{Binding ResultText}" TextTrimming="CharacterEllipsis" />
+    </Grid>
+  </Grid>
+</Window>

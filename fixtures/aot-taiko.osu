@@ -1,0 +1,23 @@
+osu file format v14
+
+[General]
+AudioFilename: missing-aot-bgm.wav
+Mode: 1
+[Metadata]
+Title: AOT Taiko
+Artist: Fixture
+Creator: Fixture
+Version: Minimal
+[Difficulty]
+HPDrainRate:5
+CircleSize:5
+OverallDifficulty:5
+ApproachRate:5
+SliderMultiplier:1.4
+SliderTickRate:1
+[TimingPoints]
+0,500,4,2,1,100,1,0
+[HitObjects]
+256,192,1000,1,0,0:0:0:0:
+256,192,1500,1,2,0:0:0:0:
+256,192,2000,1,4,0:0:0:0:

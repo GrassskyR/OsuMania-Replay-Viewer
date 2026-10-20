@@ -1,8 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Resources;
-using System.Windows.Data;
-using System.Windows.Markup;
 
 namespace ManiaReplayMaster.App.Localization;
 
@@ -37,7 +35,9 @@ public sealed class Localizer : INotifyPropertyChanged
             _culture = CultureInfo.GetCultureInfo(ResolveLanguage(preference, _systemCulture));
             _settings.SetLanguage(preference);
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Preference)));
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(Binding.IndexerName));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
+            // WPF observes Item[]; Avalonia compiled indexers observe the CLR property name.
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item"));
         }
     }
 
@@ -54,13 +54,4 @@ public sealed class Localizer : INotifyPropertyChanged
     public static string Text(string key, params object?[] args)
         => string.Format(CultureInfo.CurrentCulture, Current[key], args);
     public event PropertyChangedEventHandler? PropertyChanged;
-}
-
-/// <summary>A live indexer binding, so existing controls translate without recreating the window.</summary>
-public sealed class TextExtension : MarkupExtension
-{
-    public TextExtension(string key) => Key = key;
-    public string Key { get; }
-    public override object ProvideValue(IServiceProvider serviceProvider)
-        => new Binding($"[{Key}]") { Source = Localizer.Current, Mode = BindingMode.OneWay }.ProvideValue(serviceProvider);
 }

@@ -16,11 +16,11 @@ namespace ManiaReplayMaster.Cli;
 /// </summary>
 public static class Program
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly CliJsonContext JsonContext = new(new JsonSerializerOptions
     {
         WriteIndented = true,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
+    });
 
     public static int Main(string[] args)
     {
@@ -206,7 +206,7 @@ public static class Program
         var outPath = GetOption(args, "--out");
 
         var snapshot = PipelineSnapshot.Create(PipelineRunner.Prepare(beatmapPath, replayPath));
-        var json = JsonSerializer.Serialize(snapshot, JsonOptions);
+        var json = JsonSerializer.Serialize(snapshot, JsonContext.PipelineSnapshot);
         if (outPath is not null)
         {
             File.WriteAllText(outPath, json);
@@ -254,7 +254,7 @@ public static class Program
             try
             {
                 var snapshot = PipelineSnapshot.Create(PipelineRunner.Prepare(map, replay));
-                File.WriteAllText(outPath, JsonSerializer.Serialize(snapshot, JsonOptions));
+                File.WriteAllText(outPath, JsonSerializer.Serialize(snapshot, JsonContext.PipelineSnapshot));
                 produced++;
                 Console.WriteLine($"ok  {name}  notes={snapshot.Notes.Count} acc={snapshot.Acc:R}");
             }

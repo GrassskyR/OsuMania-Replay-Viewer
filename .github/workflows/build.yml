@@ -11,7 +11,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         shell: pwsh
@@ -19,7 +19,13 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 8.0.x
+          global-json-file: global.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
       - name: Cache release FFmpeg archive
         uses: actions/cache@v5
         with:
@@ -29,6 +35,8 @@ jobs:
         run: ./build.ps1 build
       - name: Unit and reference tests
         run: ./build.ps1 test -- --no-build --no-restore
+      - name: Headless encoder menu regression
+        run: ./build.ps1 appcheck-headless
       - name: Synthetic x86 memory checks
         run: ./build.ps1 gamecheck -- memory32
       - name: Install FFmpeg
@@ -40,6 +48,31 @@ jobs:
           $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
           $env:MRM_FFMPEG = "$PWD/artifacts/win-x64/ffmpeg.exe"
           ./build.ps1 e2e -- --no-build --no-restore
+      - name: Publish complete Native AOT package
+        run: ./build.ps1 publish-aot
+      - name: Run published native validation tools
+        run: |
+          $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
+          $env:MRM_FFMPEG = "$PWD/artifacts/win-x64-aot/ffmpeg.exe"
+          ./build.ps1 aotcheck
+      - name: Native desktop UI Automation smoke
+        run: ./build.ps1 appcheck-aot
+      - name: Upload validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-validation-diagnostics
+          path: |
+            out/aot-check/logs/
+            out/appcheck/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ManiaReplayViewer-win-x64-aot
+          path: |
+            artifacts/ManiaReplayViewer-win-x64-aot.zip
+            artifacts/ManiaReplayViewer-win-x64-aot.measurements.json
+          if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
           name: ManiaReplayViewer-win-x64

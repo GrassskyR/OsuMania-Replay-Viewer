@@ -4,6 +4,20 @@ namespace ManiaReplayMaster.RenderEncode.Tests;
 
 public class VideoEncoderSelectorTests
 {
+    [Fact]
+    public void AvailableChecksAllEncodersAndKeepsMultipleWorkingGpus()
+    {
+        var attempted = new List<EncoderSelection>();
+        var available = VideoEncoderSelector.Available(candidate =>
+        {
+            attempted.Add(candidate);
+            return candidate.Codec != "h264_qsv";
+        });
+        Assert.Equal(new[] { "libx264", "h264_nvenc", "h264_amf" }, available);
+        Assert.Equal(new[] { "libx264", "h264_nvenc", "h264_qsv", "h264_amf" }, attempted.Select(c => c.Codec));
+        Assert.Equal(new[] { "ultrafast", "p1", "veryfast", "speed" }, attempted.Select(c => c.Preset));
+    }
+
     [Theory]
     [InlineData("h264_amf", "speed", 3)]
     public void AutoSkipsUnusableEncodersAndStopsAtFirstWorkingOne(string workingCodec, string preset, int probes)

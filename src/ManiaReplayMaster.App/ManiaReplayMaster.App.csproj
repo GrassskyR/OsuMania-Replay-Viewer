@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>ManiaReplayMaster.App</RootNamespace>
@@ -13,6 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../ManiaReplayMaster.Presentation/ManiaReplayMaster.Presentation.csproj" />
     <ProjectReference Include="..\ManiaReplayMaster.Core\ManiaReplayMaster.Core.csproj" />
     <ProjectReference Include="..\ManiaReplayMaster.Render\ManiaReplayMaster.Render.csproj" />
     <ProjectReference Include="..\ManiaReplayMaster.Encode\ManiaReplayMaster.Encode.csproj" />
