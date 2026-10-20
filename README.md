@@ -7,7 +7,7 @@
 - **回放渲染**：拖入回放即可渲染，按判定结果对音符与按键着色。
 - **联动 osu!stable**：在结算界面自动识别当前成绩，匹配本地回放与谱面。
 - **参数自定义**：可调流速、分辨率、FPS 与编码器；支持仅计算判定（不导出视频）。
-- **GPU 加速**：自动检测并使用 NVENC / QSV / AMF 硬件编码，失败自动回退 CPU。
+- **外部 FFmpeg**：可选择自己的 FFmpeg，检测 NVENC / QSV / AMF 硬件编码；内置精简版使用 libx264。
 - **开箱即用**：内置中英文切换与配置记忆，按 `玩家 - 歌曲 [难度]` 格式自动命名导出文件。
 
 ## 使用说明
@@ -22,15 +22,16 @@
 ### 补充说明
 
 - **流速计算**：流速 `1` 对应 `60 像素/秒`（如默认流速 `20` = `1200 像素/秒`），调高 FPS 仅提升流畅度，不改变下落速度。
-- **编码器选择**：默认为 `libx264`（CPU）。界面右侧箭头可展开选择后台试编码检测到的硬件编码器，也可手动输入；已保存的选择会保留。选择 `auto` 时，导出前按 `NVENC → QSV → AMF → CPU (libx264)` 顺序检测。随包附带的 FFmpeg 9.0.2 要求 NVIDIA 驱动 **610.00+** 才能启用 NVENC，旧驱动请更新驱动或自行替换旧版 FFmpeg。
+- **编码器选择**：默认为 `libx264`（CPU）。内置 FFmpeg 仅提供 libx264 视频编码，保留原有 AAC 音轨和静音 MP3。通过 FFmpeg 一行的“浏览”可选择外部 `ffmpeg.exe`，路径会保存；“恢复内置”清除此选择。菜单根据所选 FFmpeg 的编码器列表和实际试编码结果刷新，外部版本可提供 NVENC/QSV/AMF。`auto` 按 `NVENC → QSV → AMF → libx264` 选择；内置版直接使用 libx264。已保存的编码器/预设不会被后台检测改写；若不可用，日志提示重新选择。
 - **配置文件**：保存在 `%LOCALAPPDATA%/ManiaReplayViewer/ui-settings.json`，崩溃日志见同目录的 `crash.log`。
 
 ## 构建与开发
 
-需要 [.NET 10 SDK x64](https://dotnet.microsoft.com/download/dotnet/10.0)（global.json 锁定 10.0.402）、PowerShell；Native AOT 编译还需 Visual Studio 2022+ 的 C++ 桌面生成工具和 Windows SDK。打包/原生回归需 Python 3。发布脚本自动下载并校验 FFmpeg 9.0.2。用 `-DotnetPath <x64-dotnet.exe>` 指定 SDK，避免误用 PATH 中的 x86 SDK。
+需要 [.NET 10 SDK x64](https://dotnet.microsoft.com/download/dotnet/10.0)（global.json 锁定 10.0.402）、PowerShell；Native AOT 编译还需 Visual Studio 2022+ 的 C++ 桌面生成工具和 Windows SDK。打包/原生回归需 Python 3。精简 FFmpeg 从固定源码构建，需 MSYS2 MINGW64 的 GCC、zlib、pkgconf、make、diffutils、tar；源码和 NASM 自动下载并校验 SHA-256。用 `-DotnetPath <x64-dotnet.exe>` 指定 SDK，避免误用 PATH 中的 x86 SDK。
 
 ```powershell
 ./build.ps1 build          # Release 构建
+./tools/ffmpeg/build-minimal.ps1 # 构建内置精简 FFmpeg；默认 MSYS2 位于 C:/msys64
 ./build.ps1 desktop        # Avalonia 开发入口（JIT）
 ./build.ps1 publish-aot    # 全新 staging 原生发布及 ZIP (artifacts/win-x64-aot/)
 ./build.ps1 app-aot        # 发布并启动 Native AOT GUI
@@ -65,6 +66,8 @@
 完整界面回归可运行 `./tools/appcheck/desktop-regression.ps1 -Exe "$PWD/artifacts/win-x64-aot/ManiaReplayViewer.exe"`，覆盖语言、原生文件选择、取消后重试和导出中关闭。它会暂时修改并恢复用户配置。无 .NET 验收可用 `./tools/appcheck/run-sandbox.ps1`；需要系统已提供 Windows Sandbox，网络在沙箱内关闭，结果写入 `out/aot-check/sandbox-*/`。`-PrepareOnly` 仅生成配置，不能算验收通过。
 
 不占用桌面的编码器菜单回归：`./build.ps1 appcheck-headless`。它通过 Avalonia Headless 加载实际界面，在内存中检查展开、选择与关闭，不创建系统窗口或发送鼠标/键盘输入；选择绑定使用隔离测试状态。build/release CI 均包含此检查，并在发布 AOT 包后运行原生诊断与 UI Automation 冒烟。
+
+视频测试的 `MRM_FFMPEG` 指向被测精简版；`MRM_FIXTURE_FFMPEG` 指向用于生成音乐/解码分析帧的完整版，`MRM_FFPROBE` 指定媒体检查工具。这些验证工具不进入发布包。精简实现结果见 [FFmpeg 结果](docs/FFMPEG-MINIMAL-RESULTS.md)。
 
 ## 项目结构
 

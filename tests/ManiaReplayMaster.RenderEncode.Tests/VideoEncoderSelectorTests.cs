@@ -5,6 +5,22 @@ namespace ManiaReplayMaster.RenderEncode.Tests;
 public class VideoEncoderSelectorTests
 {
     [Fact]
+    public void CompiledEncodersExcludeUnsupportedHardwareBeforeProbing()
+    {
+        var encoders = FfmpegCapabilities.ParseEncoders("Encoders:\n V..... = Video\n V....D libx264 H.264\n A....D aac AAC\n A....D libmp3lame MP3\n");
+        var attempted = new List<string>();
+        var available = VideoEncoderSelector.Available(selection =>
+        {
+            attempted.Add(selection.Codec);
+            return true;
+        }, encoders);
+        Assert.Equal(new[] { "libx264" }, available);
+        Assert.Equal(new[] { "libx264" }, attempted);
+        Assert.Contains("aac", encoders);
+        Assert.DoesNotContain("=", encoders);
+    }
+
+    [Fact]
     public void AvailableChecksAllEncodersAndKeepsMultipleWorkingGpus()
     {
         var attempted = new List<EncoderSelection>();

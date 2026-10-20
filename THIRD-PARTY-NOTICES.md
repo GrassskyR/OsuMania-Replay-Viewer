@@ -41,16 +41,18 @@ they are not shipped with the application.
 
 ## FFmpeg
 
-Scripted releases include the Windows x64 static **FFmpeg 9.0.2 essentials** build
-from [Gyan](https://www.gyan.dev/ffmpeg/builds/), including libx264, under GPLv3.
-It is invoked as a separate process. The publish script verifies the pinned
-archive's SHA-256 and preserves upstream notices and build/source references in
-`licenses/ffmpeg/`. The original archive is cached under `out/dependencies/ffmpeg/`
-and is not committed to this repository.
+Scripted releases include a minimal Windows x64 static **FFmpeg 9.0.2** build,
+with libx264, native AAC and libmp3lame encoding. It is invoked as a separate
+process. GPU video encoders are excluded from the bundled build; users may select
+their own FFmpeg executable. Source URLs and SHA-256 are pinned in
+`tools/ffmpeg/sources.json`; `tools/ffmpeg/build-minimal.sh` contains the build
+configuration. Notices, source references, build configuration and encoder listing
+are included in `licenses/ffmpeg/`. Downloads/build output are not committed.
 
 FFmpeg copyright (c) 2000-2026 the FFmpeg developers; included libraries retain
 their respective authors' copyrights. Source: [FFmpeg 9.0.2](https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz)
-and the [build provider's dependency sources](https://www.gyan.dev/ffmpeg/builds/#libraries).
+and the pinned x264/LAME sources in `tools/ffmpeg/sources.json`; zlib and the
+MinGW-w64 toolchain are supplied by MSYS2. Their versions are recorded in the build.
 Anyone redistributing FFmpeg must also provide the corresponding source,
 including its libraries and build configuration, as required by GPLv3.
 See [FFmpeg licensing](https://ffmpeg.org/legal.html).

@@ -208,3 +208,7 @@ python tools/package-audit.py artifacts/win-x64-aot artifacts/ManiaReplayViewer-
 重新打包产生的上一套包也移入同一归档目录；最终提交前修复两处空白格式问题并检查暂存 diff，无构建输出/日志/下载物误入提交。
 
 尚未执行远程 GitHub Actions。无 .NET 干净 Windows、DPI/实际拖放和完整实时游戏 GUI 验收仍按上文列为待完成，本轮不以后台检查替代这些验收。
+
+## 2026-10-20：精简内置 FFmpeg
+
+内置视频编码只留 libx264，保留原有 AAC/MP3 和导出参数；两套界面均支持选择外部 FFmpeg、恢复内置及按实际能力刷新编码器菜单。已生成完整 Native AOT ZIP（19.91 MiB），内置 FFmpeg 为 10.92 MiB。最新精简工具的原生 29 项检查和界面后台 6 项检查通过。详细产物、哈希及验证结果见 [FFMPEG-MINIMAL-RESULTS.md](FFMPEG-MINIMAL-RESULTS.md)。

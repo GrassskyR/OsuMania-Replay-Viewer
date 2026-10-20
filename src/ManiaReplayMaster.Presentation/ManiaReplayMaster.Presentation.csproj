@@ -6,5 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../ManiaReplayMaster.Game/ManiaReplayMaster.Game.csproj" />
+    <ProjectReference Include="../ManiaReplayMaster.Encode/ManiaReplayMaster.Encode.csproj" />
   </ItemGroup>
 </Project>

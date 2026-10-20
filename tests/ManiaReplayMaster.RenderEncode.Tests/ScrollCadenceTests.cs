@@ -54,7 +54,7 @@ public sealed class ScrollCadenceTests
             encoder.GenerateVideo();
 
             var decoded = Path.Combine(directory, "frames.gray");
-            FfmpegProbe.Run(ffmpeg, "-v", "error", "-i", video, "-an", "-pix_fmt", "gray",
+            FfmpegProbe.Run(FfmpegProbe.FixtureFfmpeg, "-v", "error", "-i", video, "-an", "-pix_fmt", "gray",
                 "-fps_mode", "passthrough", "-f", "rawvideo", decoded);
             var pixels = File.ReadAllBytes(decoded);
             const int frameBytes = width * height;

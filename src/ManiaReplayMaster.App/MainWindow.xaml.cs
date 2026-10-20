@@ -25,21 +25,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _vm;
-        Loaded += async (_, _) =>
-        {
-            var token = _encoderDetectionCancellation.Token;
-            try
-            {
-                var codecs = await Task.Run(() => VideoEncoderSelector.DetectAvailable(FfmpegLocator.Locate(),
-                    new ManiaReplayMaster.Encode.Diagnostics.PortLogger(), token), token);
-                if (!token.IsCancellationRequested) _vm.AddAvailableCodecs(codecs);
-            }
-            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
-            catch (Exception ex)
-            {
-                if (!token.IsCancellationRequested) _vm.Log(Text("Log.EncoderDetectionFailed", ex.Message));
-            }
-        };
+        Loaded += async (_, _) => await _vm.ChangeFfmpegAsync(null, _encoderDetectionCancellation.Token);
         Localizer.Current.PropertyChanged += OnLanguageChanged;
 
         _vm.InitialiseGameLink();
@@ -96,6 +82,17 @@ public partial class MainWindow : Window
         RefreshCandidateList();
         AutoLocateIfPossible();
     }
+
+    private async void OnBrowseFfmpeg(object sender, RoutedEventArgs e)
+    {
+        if (!_vm.CanChangeFfmpeg) return;
+        var picker = new Microsoft.Win32.OpenFileDialog { Title = Text("Ffmpeg.Browse"), Filter = "FFmpeg (*.exe)|*.exe" };
+        if (picker.ShowDialog(this) == true)
+            await _vm.ChangeFfmpegAsync(picker.FileName, _encoderDetectionCancellation.Token);
+    }
+
+    private async void OnResetFfmpeg(object sender, RoutedEventArgs e)
+        => await _vm.ChangeFfmpegAsync(string.Empty, _encoderDetectionCancellation.Token);
 
     private void OnBrowseBeatmap(object sender, RoutedEventArgs e)
     {
@@ -301,6 +298,7 @@ public partial class MainWindow : Window
         var replay = _vm.ReplayPath;
         var beatmap = _vm.BeatmapPath;
         var config = Config.Instance.Clone();
+        var ffmpegPath = _vm.ResolveFfmpeg();
         using var cancellation = new CancellationTokenSource();
         _cts = cancellation;
         var token = cancellation.Token;
@@ -335,7 +333,7 @@ public partial class MainWindow : Window
 
                 var result = ManiaReplayMaster.Render.RenderExporter.Run(
                     beatmap, replay, config: config, progress: progress,
-                    cancellationToken: token, encoderSelected: encoderProgress.Report);
+                    ffmpegPath: ffmpegPath, cancellationToken: token, encoderSelected: encoderProgress.Report);
                 return BuildVideoSummary(result.VideoPath, result.BeatMap, result.ReplayModel);
             }, token);
             token.ThrowIfCancellationRequested();

@@ -20,6 +20,7 @@ internal static class BehaviorChecks
             Check($"decoded frame cadence + segment merge {codec}/{fps}", () => new ScrollCadenceTests().CopiedSlicesPreserveEveryFrameAndScrollAcrossMergeBoundaries(codec, fps));
         Check("real BGM export/audio duration", () => new RenderExportEndToEndTests().RealBgm_IsMuxedThroughTheFacadeWithAtempoAndAdelay());
         var selector = new VideoEncoderSelectorTests();
+        Check("compiled encoder list filters unsupported hardware", selector.CompiledEncodersExcludeUnsupportedHardwareBeforeProbing);
         Check("available encoder discovery includes all working GPUs", selector.AvailableChecksAllEncodersAndKeepsMultipleWorkingGpus);
         Check("NVENC/QSV/AMF selection order", () => selector.AutoSkipsUnusableEncodersAndStopsAtFirstWorkingOne("h264_amf", "speed", 3));
         Check("no GPU -> CPU", selector.NoUsableHardwareFallsBackToSoftwareWithSoftwarePreset);

@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
+  <data name="Ffmpeg.Builtin" xml:space="preserve"><value>内置 FFmpeg（libx264）</value></data>
+  <data name="Ffmpeg.Reset" xml:space="preserve"><value>恢复内置</value></data>
+  <data name="Ffmpeg.Browse" xml:space="preserve"><value>选择 FFmpeg 可执行文件</value></data>
+  <data name="Ffmpeg.Tooltip" xml:space="preserve"><value>留空使用内置 FFmpeg；选择自己的版本可使用额外编码器。</value></data>
+  <data name="Ffmpeg.Active" xml:space="preserve"><value>FFmpeg：{0}</value></data>
+  <data name="Ffmpeg.Failed" xml:space="preserve"><value>无法使用 FFmpeg：{0}</value></data>
+  <data name="Ffmpeg.UnavailableCodec" xml:space="preserve"><value>当前 FFmpeg 无法使用编码器 {0}。请选择 libx264，或指定支持该编码器的外部 FFmpeg。</value></data>
   <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
   <resheader name="version"><value>2.0</value></resheader>
   <data name="Language.Label" xml:space="preserve"><value>界面语言</value></data>

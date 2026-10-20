@@ -15,14 +15,16 @@ public static class VideoEncoderSelector
     private static readonly string[] HardwareCodecs = ["h264_nvenc", "h264_qsv", "h264_amf"];
 
     /// <summary>Lists every encoder that can initialize, rather than stopping at the first working GPU.</summary>
-    public static IReadOnlyList<string> Available(Func<EncoderSelection, bool> probe)
+    public static IReadOnlyList<string> Available(Func<EncoderSelection, bool> probe, IReadOnlySet<string>? compiled = null)
         => new[] { "libx264" }.Concat(HardwareCodecs)
+            .Where(codec => compiled is null || compiled.Contains(codec))
             .Where(codec => probe(new EncoderSelection(codec, DefaultPreset(codec))))
             .ToArray();
 
     public static IReadOnlyList<string> DetectAvailable(string ffmpegPath, PortLogger log,
         CancellationToken cancellationToken = default)
-        => Available(selection => Probe(ffmpegPath, 540, 960, 60, selection, log, cancellationToken));
+        => Available(selection => Probe(ffmpegPath, 540, 960, 60, selection, log, cancellationToken),
+            FfmpegCapabilities.ReadEncoders(ffmpegPath, cancellationToken));
 
     public static bool IsAutomatic(string codec) => string.Equals(codec.Trim(), "auto", StringComparison.OrdinalIgnoreCase);
 
@@ -57,8 +59,9 @@ public static class VideoEncoderSelector
         string codec, string preset, PortLogger log, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return Select(codec, preset, selection => Probe(ffmpegPath, width, height, frameRate,
-            selection, log, cancellationToken));
+        var compiled = IsAutomatic(codec) ? FfmpegCapabilities.ReadEncoders(ffmpegPath, cancellationToken) : null;
+        return Select(codec, preset, selection => compiled!.Contains(selection.Codec) &&
+            Probe(ffmpegPath, width, height, frameRate, selection, log, cancellationToken));
     }
 
     private static bool Probe(string ffmpegPath, int width, int height, int frameRate,

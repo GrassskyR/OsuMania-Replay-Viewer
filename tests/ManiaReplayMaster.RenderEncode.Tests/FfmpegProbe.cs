@@ -13,6 +13,7 @@ namespace ManiaReplayMaster.RenderEncode.Tests;
 /// </summary>
 internal static class FfmpegProbe
 {
+    public static string FixtureFfmpeg => Environment.GetEnvironmentVariable("MRM_FIXTURE_FFMPEG") ?? Resolve().Ffmpeg;
     public static (string Ffmpeg, string Ffprobe) Resolve()
     {
         var configured = Environment.GetEnvironmentVariable("MRM_FFMPEG");
@@ -22,7 +23,8 @@ internal static class FfmpegProbe
                 ? @"C:\ffmpeg\ffmpeg.exe"
                 : "ffmpeg";
 
-        var ffprobe = Path.Combine(Path.GetDirectoryName(ffmpeg) ?? ".", "ffprobe.exe");
+        var ffprobe = Environment.GetEnvironmentVariable("MRM_FFPROBE")
+            ?? Path.Combine(Path.GetDirectoryName(ffmpeg) ?? ".", "ffprobe.exe");
         if (!File.Exists(ffprobe))
         {
             ffprobe = "ffprobe";

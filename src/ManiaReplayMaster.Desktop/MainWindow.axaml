@@ -107,6 +107,7 @@
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding L[Speed]}" Classes="label" />
         <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="*,30" Margin="0,0,12,0">
@@ -148,6 +149,13 @@
         <TextBox x:Name="OutputBox" AutomationProperties.AutomationId="OutputBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding OutputDir, Mode=TwoWay}" />
         <Button Grid.Row="2" Grid.Column="4" Grid.ColumnSpan="2" AutomationProperties.AutomationId="OpenOutputButton" Content="{Binding L[OpenOutput]}" Margin="12,0,0,0" HorizontalAlignment="Stretch"
                 Click="OnOpenOutputDir" />
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="FFmpeg" Classes="label" />
+        <TextBox x:Name="FfmpegPathBox" AutomationProperties.AutomationId="FfmpegPathBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3"
+                 IsReadOnly="True" Text="{Binding FfmpegPath}" PlaceholderText="{Binding L[Ffmpeg.Builtin]}" ToolTip.Tip="{Binding L[Ffmpeg.Tooltip]}" />
+        <Grid Grid.Row="3" Grid.Column="4" Grid.ColumnSpan="2" ColumnDefinitions="*,*" Margin="12,0,0,0" IsEnabled="{Binding CanChangeFfmpeg}">
+          <Button AutomationProperties.AutomationId="BrowseFfmpegButton" Content="{Binding L[Browse]}" Click="OnBrowseFfmpeg" HorizontalAlignment="Stretch" Margin="0,0,6,0" />
+          <Button Grid.Column="1" AutomationProperties.AutomationId="ResetFfmpegButton" Content="{Binding L[Ffmpeg.Reset]}" Click="OnResetFfmpeg" HorizontalAlignment="Stretch" Margin="0" />
+        </Grid>
       </Grid>
     </Border>
 

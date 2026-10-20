@@ -1,0 +1,6 @@
+{
+  "ffmpeg": { "file": "ffmpeg-9.0.2.tar.xz", "url": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz", "sha256": "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e" },
+  "x264": { "file": "x264-b35605a.tar.bz2", "url": "https://code.videolan.org/videolan/x264/-/archive/b35605ace3ddf7c1a5d67a2eb553f034aef41d55/x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55.tar.bz2", "sha256": "6eeb82934e69fd51e043bd8c5b0d152839638d1ce7aa4eea65a3fedcf83ff224" },
+  "lame": { "file": "lame-3.100.tar.gz", "url": "https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz", "sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e" },
+  "nasm": { "file": "nasm-2.16.03-win64.zip", "url": "https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-win64.zip", "sha256": "3ee4782247bcb874378d02f7eab4e294a84d3d15f3f6ee2de2f47a46aa7226e6" }
+}

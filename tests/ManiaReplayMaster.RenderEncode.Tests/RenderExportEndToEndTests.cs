@@ -29,7 +29,7 @@ public class RenderExportEndToEndTests
             File.Copy(RepoPaths.Fixture(ReplayFile), replayCopy);
 
             var bgm = Path.Combine(workspace, DeclaredAudioFile);
-            FfmpegProbe.Run(ffmpeg, "-hide_banner", "-loglevel", "error",
+            FfmpegProbe.Run(FfmpegProbe.FixtureFfmpeg, "-hide_banner", "-loglevel", "error",
                 "-f", "lavfi", "-t", "130", "-i", "sine=frequency=440:sample_rate=44100",
                 "-ac", "2", "-b:a", "128k", bgm, "-y");
             Assert.True(File.Exists(bgm));
@@ -65,6 +65,7 @@ public class RenderExportEndToEndTests
 
             // A real 130 s BGM proves the audio path: the mute fallback would be ~2 s.
             var audio = Assert.Single(media.AudioStreams);
+            Assert.Equal("aac", audio.CodecName);
             Assert.True(audio.DurationSeconds > 60.0,
                 $"expected the real BGM in the output, got a {audio.DurationSeconds:F2}s audio track");
         }

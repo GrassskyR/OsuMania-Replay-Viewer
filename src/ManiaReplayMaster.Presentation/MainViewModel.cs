@@ -15,14 +15,17 @@ namespace ManiaReplayMaster.App;
 public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly GameBridge _game = new();
+    private readonly UiSettings _settings;
     public Localizer L => Localizer.Current;
 
     public IReadOnlyList<CandidateItem>? DetectedCandidates { get; private set; }
 
-    public MainViewModel()
+    public MainViewModel(UiSettings? settings = null)
     {
+        _settings = settings ?? UiSettings.Current;
         var config = Core.Model.Config.Instance;
-        UiSettings.Current.ApplyRendering(config);
+        _settings.ApplyRendering(config);
+        _ffmpegPath = _settings.FfmpegPath;
         _speed = config.Speed;
         _width = config.Width;
         _height = config.Height;
@@ -40,6 +43,77 @@ public sealed class MainViewModel : INotifyPropertyChanged
     }
 
     public ObservableCollection<string> LogLines { get; }
+
+    private string _ffmpegPath;
+    public string FfmpegPath => _ffmpegPath;
+    public string ResolveFfmpeg() => string.IsNullOrWhiteSpace(_ffmpegPath)
+        ? ManiaReplayMaster.Encode.FfmpegLocator.Locate() : _ffmpegPath;
+    public bool CanChangeFfmpeg => !IsBusy && !IsCheckingFfmpeg;
+    private bool _isCheckingFfmpeg;
+    public bool IsCheckingFfmpeg
+    {
+        get => _isCheckingFfmpeg;
+        set
+        {
+            if (!Set(ref _isCheckingFfmpeg, value)) return;
+            OnPropertyChanged(nameof(CanChangeFfmpeg));
+            OnPropertyChanged(nameof(CanRender));
+        }
+    }
+
+    private void UseFfmpeg(string path)
+    {
+        if (Set(ref _ffmpegPath, path, nameof(FfmpegPath))) _settings.SetFfmpegPath(path);
+    }
+
+    public void ReplaceAvailableCodecs(IEnumerable<string> codecs)
+    {
+        _updatingCodecChoices = true;
+        try
+        {
+            CodecChoices.Clear();
+            foreach (var codec in codecs.Distinct()) CodecChoices.Add(codec);
+            CodecChoices.Add("auto");
+        }
+        finally { _updatingCodecChoices = false; }
+        OnPropertyChanged(nameof(Codec));
+        OnPropertyChanged(nameof(CodecPreset));
+        if (!CodecChoices.Contains(Codec) && Codec != "auto")
+            Log(Text("Ffmpeg.UnavailableCodec", Codec));
+    }
+
+    public async Task ChangeFfmpegAsync(string? newPath, CancellationToken cancellationToken)
+    {
+        if (IsCheckingFfmpeg || IsBusy) return;
+        IsCheckingFfmpeg = true;
+        try
+        {
+            var path = newPath ?? FfmpegPath;
+            if (!string.IsNullOrWhiteSpace(path)) path = Path.GetFullPath(path);
+            var executable = string.IsNullOrWhiteSpace(path)
+                ? ManiaReplayMaster.Encode.FfmpegLocator.Locate() : path;
+            var result = await Task.Run(() =>
+            {
+                var version = newPath is not null
+                    ? ManiaReplayMaster.Encode.FfmpegCapabilities.Validate(executable, cancellationToken) : null;
+                var codecs = ManiaReplayMaster.Encode.VideoEncoderSelector.DetectAvailable(executable,
+                    new ManiaReplayMaster.Encode.Diagnostics.PortLogger(), cancellationToken);
+                return (version, codecs);
+            }, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (newPath is not null) UseFfmpeg(path);
+            ReplaceAvailableCodecs(result.codecs);
+            Log(Text("Ffmpeg.Active", executable));
+            if (result.version is not null) Log(result.version);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
+            or InvalidOperationException or TimeoutException or System.ComponentModel.Win32Exception)
+        {
+            Log(Text("Ffmpeg.Failed", ex.Message));
+        }
+        finally { IsCheckingFfmpeg = false; }
+    }
 
     // ---------------------------------------------------------------- paths
 
@@ -140,7 +214,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
 
             Core.Model.Config.Instance.Speed = value;
-            UiSettings.Current.RememberRendering(Core.Model.Config.Instance);
+            _settings.RememberRendering(Core.Model.Config.Instance);
             OnPropertyChanged(nameof(SpeedText));
         }
     }
@@ -187,6 +261,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     }
 
     public ObservableCollection<string> CodecChoices { get; } = ["libx264", "auto"];
+    private bool _updatingCodecChoices;
 
     public void AddAvailableCodecs(IEnumerable<string> codecs)
     {
@@ -221,6 +296,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         get => _codec;
         set
         {
+            if (_updatingCodecChoices || string.IsNullOrWhiteSpace(value)) return;
             if (Set(ref _codec, value))
             {
                 Core.Model.Config.Instance.Codec = value;
@@ -229,7 +305,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 OnPropertyChanged(nameof(CanSelectPreset));
                 CodecPreset = "auto";
                 OnPropertyChanged(nameof(CodecPreset));
-                UiSettings.Current.RememberRendering(Core.Model.Config.Instance);
+                _settings.RememberRendering(Core.Model.Config.Instance);
             }
         }
     }
@@ -243,7 +319,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             if (!string.IsNullOrWhiteSpace(value) && Set(ref _codecPreset, value))
             {
                 Core.Model.Config.Instance.CodecPreset = value;
-                UiSettings.Current.RememberRendering(Core.Model.Config.Instance);
+                _settings.RememberRendering(Core.Model.Config.Instance);
             }
         }
     }
@@ -300,6 +376,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             if (Set(ref _isBusy, value))
             {
                 OnPropertyChanged(nameof(CanRender));
+                OnPropertyChanged(nameof(CanChangeFfmpeg));
             }
         }
     }
@@ -312,7 +389,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ResultText));
     }
 
-    public bool CanRender => !IsBusy
+    public bool CanRender => !IsBusy && !IsCheckingFfmpeg
                              && !string.IsNullOrWhiteSpace(ReplayPath)
                              && !string.IsNullOrWhiteSpace(BeatmapPath)
                              && File.Exists(ReplayPath)

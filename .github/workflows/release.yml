@@ -62,27 +62,41 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-      - name: Cache release FFmpeg archive
+      - uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: MINGW64
+          update: false
+          install: make diffutils tar mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib mingw-w64-x86_64-pkgconf
+      - name: Cache minimal FFmpeg build
         uses: actions/cache@v5
         with:
-          path: out/dependencies/ffmpeg/
-          key: ffmpeg-win-x64-${{ hashFiles('tools/package-ffmpeg.ps1') }}
+          path: out/dependencies/ffmpeg-minimal/
+          key: ffmpeg-minimal-win-x64-v1-${{ hashFiles('tools/ffmpeg/**') }}
+      - name: Build minimal FFmpeg
+        run: ./tools/ffmpeg/build-minimal.ps1 -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
       - name: Build
         run: ./build.ps1 build
       - name: Unit and reference tests
         run: ./build.ps1 test -- --no-build --no-restore
+      - name: Install FFmpeg validation tools
+        run: choco install ffmpeg --yes --no-progress
       - name: Headless encoder menu regression
-        run: ./build.ps1 appcheck-headless
+        run: |
+          $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
+          $env:MRM_FFMPEG = "$PWD/out/dependencies/ffmpeg-minimal/package/ffmpeg.exe"
+          $env:MRM_FIXTURE_FFMPEG = "C:/ProgramData/chocolatey/bin/ffmpeg.exe"
+          ./build.ps1 appcheck-headless
       - name: Synthetic x86 memory checks
         run: ./build.ps1 gamecheck -- memory32
-      - name: Install FFmpeg
-        run: choco install ffmpeg --yes --no-progress
       - name: Publish self-contained application
         run: ./build.ps1 publish
       - name: Export and frame cadence tests
         run: |
           $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
           $env:MRM_FFMPEG = "$PWD/artifacts/win-x64/ffmpeg.exe"
+          $env:MRM_FIXTURE_FFMPEG = "C:/ProgramData/chocolatey/bin/ffmpeg.exe"
+          $env:MRM_FFPROBE = "C:/ProgramData/chocolatey/bin/ffprobe.exe"
           ./build.ps1 e2e -- --no-build --no-restore
       - name: Package self-contained application
         run: Compress-Archive -Path artifacts/win-x64/* -DestinationPath artifacts/ManiaReplayViewer-win-x64.zip -Force
@@ -94,6 +108,8 @@ jobs:
         run: |
           $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
           $env:MRM_FFMPEG = "$PWD/artifacts/win-x64-aot/ffmpeg.exe"
+          $env:MRM_FIXTURE_FFMPEG = "C:/ProgramData/chocolatey/bin/ffmpeg.exe"
+          $env:MRM_FFPROBE = "C:/ProgramData/chocolatey/bin/ffprobe.exe"
           ./build.ps1 aotcheck
       - name: Native desktop UI Automation smoke
         run: ./build.ps1 appcheck-aot

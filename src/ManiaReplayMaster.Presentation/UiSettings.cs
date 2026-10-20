@@ -29,6 +29,14 @@ public sealed class UiSettings
     }
 
     public string Language => ReadString("language") ?? "auto";
+    public string FfmpegPath => ReadString("ffmpegPath") ?? string.Empty;
+
+    public void SetFfmpegPath(string path)
+    {
+        if (FfmpegPath == path) return;
+        _values["ffmpegPath"] = path;
+        Save();
+    }
 
     public void SetLanguage(string language)
     {

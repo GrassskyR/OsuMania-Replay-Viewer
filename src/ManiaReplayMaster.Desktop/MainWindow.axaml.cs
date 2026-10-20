@@ -19,7 +19,7 @@ namespace ManiaReplayMaster.Desktop;
 
 public partial class MainWindow : Window
 {
-    private readonly MainViewModel _vm = new();
+    private readonly MainViewModel _vm;
     private readonly DispatcherTimer _detectTimer;
     private CancellationTokenSource? _cts;
     private TaskCompletionSource? _workFinished;
@@ -31,8 +31,11 @@ public partial class MainWindow : Window
     private IReadOnlyList<CandidateItem>? _lastDetectedCandidates;
     private bool _updatingCandidates;
 
-    public MainWindow()
+    public MainWindow() : this(new MainViewModel()) { }
+
+    public MainWindow(MainViewModel viewModel)
     {
+        _vm = viewModel;
         InitializeComponent();
         DataContext = _vm;
         Closing += OnClosing;
@@ -241,18 +244,27 @@ public partial class MainWindow : Window
 
     private async Task DetectEncodersAsync()
     {
-        var token = _encoderDetectionCancellation.Token;
-        try
+        await _vm.ChangeFfmpegAsync(null, _encoderDetectionCancellation.Token);
+    }
+
+    private async void OnBrowseFfmpeg(object? sender, RoutedEventArgs e)
+    {
+        if (!_vm.CanChangeFfmpeg || _closing) return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            var codecs = await Task.Run(() => VideoEncoderSelector.DetectAvailable(
-                FfmpegLocator.Locate(), new ManiaReplayMaster.Encode.Diagnostics.PortLogger(), token), token);
-            if (!_closing) _vm.AddAvailableCodecs(codecs);
-        }
-        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
-        catch (Exception ex)
-        {
-            if (!_closing) _vm.Log(Text("Log.EncoderDetectionFailed", ex.Message));
-        }
+            Title = Text("Ffmpeg.Browse"), AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("FFmpeg") { Patterns = ["*.exe"] }]
+        });
+        if (_closing || files.FirstOrDefault()?.TryGetLocalPath() is not { } path) return;
+        _encoderDetection = _vm.ChangeFfmpegAsync(path, _encoderDetectionCancellation.Token);
+        await _encoderDetection;
+    }
+
+    private async void OnResetFfmpeg(object? sender, RoutedEventArgs e)
+    {
+        if (!_vm.CanChangeFfmpeg || _closing) return;
+        _encoderDetection = _vm.ChangeFfmpegAsync(string.Empty, _encoderDetectionCancellation.Token);
+        await _encoderDetection;
     }
 
     private void OnCodecDropDown(object? sender, RoutedEventArgs e)
@@ -315,6 +327,7 @@ public partial class MainWindow : Window
         var replay = _vm.ReplayPath;
         var beatmap = _vm.BeatmapPath;
         var config = Config.Instance.Clone();
+        var ffmpegPath = _vm.ResolveFfmpeg();
         using var cancellation = new CancellationTokenSource();
         _cts = cancellation;
         _workFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -350,7 +363,7 @@ public partial class MainWindow : Window
 
                 var result = ManiaReplayMaster.Render.RenderExporter.Run(
                     beatmap, replay, config: config, progress: progress,
-                    cancellationToken: token, encoderSelected: encoderProgress.Report);
+                    ffmpegPath: ffmpegPath, cancellationToken: token, encoderSelected: encoderProgress.Report);
                 return BuildVideoSummary(result.VideoPath, result.BeatMap, result.ReplayModel);
             }, token);
             token.ThrowIfCancellationRequested();

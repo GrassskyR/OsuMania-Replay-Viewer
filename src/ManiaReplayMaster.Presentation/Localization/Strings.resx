@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
+  <data name="Ffmpeg.Builtin" xml:space="preserve"><value>Bundled FFmpeg (libx264)</value></data>
+  <data name="Ffmpeg.Reset" xml:space="preserve"><value>Use bundled</value></data>
+  <data name="Ffmpeg.Browse" xml:space="preserve"><value>Select FFmpeg executable</value></data>
+  <data name="Ffmpeg.Tooltip" xml:space="preserve"><value>Empty uses bundled FFmpeg. Select your own build to enable additional encoders.</value></data>
+  <data name="Ffmpeg.Active" xml:space="preserve"><value>FFmpeg: {0}</value></data>
+  <data name="Ffmpeg.Failed" xml:space="preserve"><value>FFmpeg could not be used: {0}</value></data>
+  <data name="Ffmpeg.UnavailableCodec" xml:space="preserve"><value>Encoder {0} is unavailable in this FFmpeg. Choose libx264 or select an external FFmpeg that supports it.</value></data>
   <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
   <resheader name="version"><value>2.0</value></resheader>
   <data name="Language.Label" xml:space="preserve"><value>Language</value></data>

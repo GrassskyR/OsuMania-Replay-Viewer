@@ -126,16 +126,18 @@ internal static class IntegrationChecks
             var replay = RepoPaths.Fixture(format + (malody ? ".mr" : ".osr"));
             File.Copy(RepoPaths.Fixture(Path.GetFileName(map)), map);
             if (bgm)
-                FfmpegProbe.Run(FfmpegProbe.Resolve().Ffmpeg, "-v", "error", "-f", "lavfi", "-i",
+                FfmpegProbe.Run(FfmpegProbe.FixtureFfmpeg, "-v", "error", "-f", "lavfi", "-i",
                     "sine=frequency=440:sample_rate=44100", "-t", "6", Path.Combine(dir, "missing-aot-bgm.wav"));
             var config = new Config { Width = 180, Height = 320, FramePerSecond = fps,
                 MaxStepSize = bgm ? 900 : 3000, FfmpegMaxProcessingSize = bgm ? 2 : 99 };
-            var result = RenderExporter.Run(map, replay, Path.Combine(dir, "video.mp4"), config: config);
+            var result = RenderExporter.Run(map, replay, Path.Combine(dir, "video.mp4"), config: config,
+                ffmpegPath: FfmpegProbe.Resolve().Ffmpeg);
             var media = FfmpegProbe.Inspect(FfmpegProbe.Resolve().Ffprobe, result.VideoPath);
             var video = Assert.Single(media.VideoStreams);
             Assert.Equal(malody ? 180 : 320, video.Width);
             Assert.Equal(malody ? 320 : 180, video.Height);
             var audio = Assert.Single(media.AudioStreams);
+            Assert.Equal("aac", audio.CodecName);
             var expectedVideoSeconds = result.Render.ImageCount * result.Render.WindowFrameCount / (double)fps;
             Assert.InRange(video.DurationSeconds, expectedVideoSeconds - 1.0 / fps, expectedVideoSeconds + 1.0 / fps);
             Assert.InRange(audio.DurationSeconds, (bgm ? 7.0 : 2.0) - 0.1, (bgm ? 7.0 : 2.0) + 0.1);
@@ -149,7 +151,7 @@ internal static class IntegrationChecks
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         var watch = Stopwatch.StartNew();
         Assert.Throws<OperationCanceledException>(() => FfmpegRunner.Run(FfmpegProbe.Resolve().Ffmpeg,
-            ["-v", "error", "-re", "-f", "lavfi", "-i", "testsrc2=s=180x320:r=60", "-t", "30", "-c:v", "libx264", Path.Combine(temp, "cancel.mp4")],
+            ["-v", "error", "-re", "-f", "lavfi", "-i", "color=black:s=180x320:r=60", "-t", "30", "-c:v", "libx264", Path.Combine(temp, "cancel.mp4")],
             Path.Combine(temp, "cancel.mp4"), 30, "cancel", 0, 100, new ProgressReporter(null), new PortLogger(), cancellation.Token));
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5));
         Assert.All(Process.GetProcessesByName("ffmpeg"), p => { using (p) Assert.Contains(p.Id, before); });
