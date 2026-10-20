@@ -47,8 +47,8 @@
   <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
   <data name="Status.NoScore" xml:space="preserve"><value>No score detected yet.</value></data>
   <data name="Status.Checking" xml:space="preserve"><value>osu!: checking…</value></data>
-  <data name="Status.Detected" xml:space="preserve"><value>osu!: detected</value></data>
-  <data name="Status.NotFound" xml:space="preserve"><value>osu!: not found</value></data>
+  <data name="Status.Running" xml:space="preserve"><value>osu!: running</value></data>
+  <data name="Status.Closed" xml:space="preserve"><value>osu!: not running</value></data>
   <data name="Status.Unavailable" xml:space="preserve"><value>osu!: unavailable</value></data>
   <data name="Status.AutoOff" xml:space="preserve"><value>Automatic osu! detection is off.</value></data>
   <data name="Status.MemoryOff" xml:space="preserve"><value>Process memory reading is disabled.</value></data>

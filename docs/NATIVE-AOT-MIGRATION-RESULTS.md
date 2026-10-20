@@ -212,3 +212,7 @@ python tools/package-audit.py artifacts/win-x64-aot artifacts/ManiaReplayViewer-
 ## 2026-10-20：精简内置 FFmpeg
 
 内置视频编码只留 libx264，保留原有 AAC/MP3 和导出参数；两套界面均支持选择外部 FFmpeg、恢复内置及按实际能力刷新编码器菜单。已生成完整 Native AOT ZIP（19.91 MiB），内置 FFmpeg 为 10.92 MiB。最新精简工具的原生 29 项检查和界面后台 6 项检查通过。详细产物、哈希及验证结果见 [FFMPEG-MINIMAL-RESULTS.md](FFMPEG-MINIMAL-RESULTS.md)。
+
+## 2026-10-20：osu! 运行状态
+
+顶栏状态改为检测 `osu!.exe` 进程，显示“osu!：运行中”（绿色）或“osu!：未运行”（灰色）。两套界面沿用 500 ms 定时刷新；关闭成绩自动检测、关闭内存读取或正在渲染时仍更新状态，不再以安装目录是否存在作为运行依据。Release 构建和现有无系统窗口界面检查通过；日志为 `out/ffmpeg-minimal-check/osu-status-build.log` 和 `osu-status-headless.log`。

@@ -190,8 +190,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     }
 
     private bool _gameInitialised;
+    private bool _osuRunning;
     public string GameStatusText => Text(!_gameInitialised ? "Status.Checking"
-        : !_game.Available ? "Status.Unavailable" : _game.OsuFound ? "Status.Detected" : "Status.NotFound");
+        : _osuRunning ? "Status.Running" : "Status.Closed");
 
     private string _gamePillBrush = "#9AA0AD";
     public string GamePillBrush
@@ -415,22 +416,26 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         _game.Initialise();
         _gameInitialised = true;
-        OnPropertyChanged(nameof(GameStatusText));
+        RefreshGameStatus();
         if (_game.Available && _game.OsuFound)
         {
-            GamePillBrush = "#79D2A6";
             Log(Text("Game.Located", _game.OsuRoot));
         }
         else if (_game.Available)
         {
-            GamePillBrush = "#E8BF6A";
             Log(Text("Game.NotFound"));
         }
         else
         {
-            GamePillBrush = "#9AA0AD";
             Log(_game.Detail);
         }
+    }
+
+    private void RefreshGameStatus()
+    {
+        _osuRunning = _game.OsuRunning;
+        GamePillBrush = _osuRunning ? "#79D2A6" : "#9AA0AD";
+        OnPropertyChanged(nameof(GameStatusText));
     }
 
     /// <summary>
@@ -439,6 +444,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// </summary>
     public bool PollAutoDetect()
     {
+        // Keep the status live even when score detection/memory reading is disabled or rendering is active.
+        RefreshGameStatus();
         if (!AutoDetectFromGame || IsBusy || !_game.Available)
         {
             return false;

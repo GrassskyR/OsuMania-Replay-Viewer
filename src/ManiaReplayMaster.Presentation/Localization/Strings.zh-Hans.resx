@@ -47,8 +47,8 @@
   <data name="Cancel" xml:space="preserve"><value>取消</value></data>
   <data name="Status.NoScore" xml:space="preserve"><value>尚未检测到成绩。</value></data>
   <data name="Status.Checking" xml:space="preserve"><value>osu!：检测中…</value></data>
-  <data name="Status.Detected" xml:space="preserve"><value>osu!：已检测到</value></data>
-  <data name="Status.NotFound" xml:space="preserve"><value>osu!：未找到</value></data>
+  <data name="Status.Running" xml:space="preserve"><value>osu!：运行中</value></data>
+  <data name="Status.Closed" xml:space="preserve"><value>osu!：未运行</value></data>
   <data name="Status.Unavailable" xml:space="preserve"><value>osu!：不可用</value></data>
   <data name="Status.AutoOff" xml:space="preserve"><value>已关闭 osu! 自动检测。</value></data>
   <data name="Status.MemoryOff" xml:space="preserve"><value>已关闭游戏内存读取。</value></data>

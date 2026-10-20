@@ -49,6 +49,9 @@ internal sealed class GameBridge : IDisposable
 
     public bool OsuFound => _service?.Locator.Found == true;
 
+    // Process presence is independent of installation discovery and memory-read permissions.
+    public bool OsuRunning => ProcessMemory.FindProcessId() is not null;
+
     public string? OsuRoot => _service?.Locator.Found == true ? _service.Locator.Root : null;
 
     public void SetMemoryEnabled(bool enabled)

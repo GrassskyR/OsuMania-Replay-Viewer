@@ -12,16 +12,16 @@
 - GUI 探测和导出使用同一 FFmpeg；旧外部路径失效时明确报错。关闭窗口会取消检测并终止相关子进程。
 - 打包、build/release CI 接入精简构建；完整版 FFmpeg/ffprobe 只用于测试素材和帧分析，不进入产品包。
 
-最终产物：
+最终产物（包含 osu! 运行状态更新）：
 
 | 文件 | 大小 |
 |---|---:|
-| `artifacts/ManiaReplayViewer-win-x64-aot.zip` | 20,878,247 字节（19.91 MiB） |
+| `artifacts/ManiaReplayViewer-win-x64-aot.zip` | 20,877,064 字节（19.91 MiB） |
 | 解压后完整目录 | 49,966,237 字节（47.65 MiB） |
 | `ManiaReplayViewer.exe` | 17,944,064 字节（17.11 MiB） |
 | 内置 `ffmpeg.exe` | 11,447,808 字节（10.92 MiB） |
 
-- ZIP SHA-256：`284bb79a5a30b5ce99a8dec1033edd073049245884fdd3cb95514d3c52c729d4`。
+- ZIP SHA-256：`7d773a5766694692b0ef4675407d56b75afb4f1a5c2864d429f4dddde5d63164`。
 - FFmpeg SHA-256：`df27586b2e4a64742dfa89961d80f39b8eb8ec8eccafb6a55be538a4cd7d5141`。
 - 实际内置编码器检测：`libx264`；FFmpeg 仅导入 Windows 系统 DLL，无额外工具链 DLL。
 - Release 构建和 25 项单元/参考检查、7 项视频端到端检查通过。
