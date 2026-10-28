@@ -9,7 +9,7 @@
 - **参数自定义**：可调流速、分辨率、FPS 与编码器；支持仅计算判定（不导出视频）。
 - **外部 FFmpeg**：可选择自己的 FFmpeg，检测 NVENC / QSV / AMF 硬件编码；内置精简版使用 libx264。
 - **开箱即用**：内置中英文切换与配置记忆，按 `玩家 - 歌曲 [难度]` 格式自动命名导出文件。
-- **窗口自适应**：默认约 960×680（逻辑尺寸），根据当前显示器的可用区域和 DPI 缩放收缩；跨屏时自动避让屏幕边界，窄窗口参数换行，小窗口内容可滚动，底部操作按钮保持可见。
+- **窗口自适应**：默认约 900×620（逻辑尺寸），使用紧凑控件和日志行，根据当前显示器的可用区域和 DPI 缩放收缩；跨屏时自动避让屏幕边界，参数按可用逻辑宽度均分为三列、两列或一列，宽度低于 560 时路径标签移到输入框上方；最小窗口约 480×320，小窗口内容可滚动，底部操作按钮保持可见。
 
 ## 使用说明
 
@@ -40,7 +40,7 @@
 ./build.ps1 app-aot        # 发布并启动 Native AOT GUI
 ./build.ps1 aotcheck       # 发布并运行原生 CLI/渲染/缓存/x86 内存回归
 ./build.ps1 appcheck-aot   # 对发布的原生 GUI 做 UI Automation 冒烟
-./build.ps1 appcheck-headless # 无系统窗口的编码器菜单回归
+./build.ps1 appcheck-headless # 无系统窗口的布局 / DPI / 编码器菜单回归
 ./build.ps1 appcheck       # 构建 Avalonia 并进行 JIT GUI 冒烟
 ./build.ps1 test           # 运行单元测试（无需 FFmpeg）
 ./build.ps1 e2e            # 运行视频导出等端到端测试（需 FFmpeg）
@@ -66,7 +66,7 @@
 
 完整界面回归可运行 `./tools/appcheck/desktop-regression.ps1 -Exe "$PWD/artifacts/win-x64-aot/ManiaReplayViewer.exe"`，覆盖语言、原生文件选择、取消后重试和导出中关闭。它会暂时修改并恢复用户配置。无 .NET 验收可用 `./tools/appcheck/run-sandbox.ps1`；需要系统已提供 Windows Sandbox，网络在沙箱内关闭，结果写入 `out/aot-check/sandbox-*/`。`-PrepareOnly` 仅生成配置，不能算验收通过。
 
-不占用桌面的编码器菜单回归：`./build.ps1 appcheck-headless`。它通过 Avalonia Headless 加载实际界面，在内存中检查展开、选择与关闭，不创建系统窗口或发送鼠标/键盘输入；选择绑定使用隔离测试状态。build/release CI 均包含此检查，并在发布 AOT 包后运行原生诊断与 UI Automation 冒烟。
+不占用桌面的布局与编码器菜单回归：`./build.ps1 appcheck-headless`。它通过 Avalonia Headless 加载实际界面，在内存中检查中英文布局、100%～300% DPI、参数分列、底部操作区和日志滚动，以及菜单展开、选择与关闭，不创建系统窗口或发送鼠标/键盘输入；选择绑定使用隔离测试状态。build/release CI 均包含此检查，并在发布 AOT 包后运行原生诊断与 UI Automation 冒烟。
 
 视频测试的 `MRM_FFMPEG` 指向被测精简版；`MRM_FIXTURE_FFMPEG` 指向用于生成音乐/解码分析帧的完整版，`MRM_FFPROBE` 指定媒体检查工具。这些验证工具不进入发布包。精简实现结果见 [FFmpeg 结果](docs/FFMPEG-MINIMAL-RESULTS.md)。
 

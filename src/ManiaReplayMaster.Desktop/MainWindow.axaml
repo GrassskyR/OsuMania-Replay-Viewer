@@ -2,16 +2,23 @@
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ManiaReplayMaster.Presentation"
+        xmlns:controls="using:ManiaReplayMaster.Desktop.Controls"
         x:DataType="vm:MainViewModel" x:CompileBindings="True"
-        Title="Mania Replay Viewer" Height="680" Width="960"
-        MinHeight="360" MinWidth="560"
+        Title="Mania Replay Viewer" Height="620" Width="900"
+        MinHeight="320" MinWidth="480"
         WindowStartupLocation="CenterScreen"
         FontFamily="Segoe UI" FontSize="12" UseLayoutRounding="True"
         DragDrop.AllowDrop="True"
         Background="#FF1E1E1E"
         Foreground="{StaticResource TextPrimary}">
 
-  <Grid Margin="12">
+  <Window.Styles>
+    <Style Selector="Window.narrow controls|FormRow">
+      <Setter Property="IsStacked" Value="True" />
+    </Style>
+  </Window.Styles>
+
+  <Grid Margin="10">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
@@ -21,7 +28,7 @@
 
     <!-- Header + game status -->
     <WrapPanel Grid.Row="0">
-      <TextBlock Text="Mania Replay Viewer" FontSize="20" FontWeight="Bold" Margin="0,0,20,6" VerticalAlignment="Center" />
+      <TextBlock Text="Mania Replay Viewer" FontSize="16" FontWeight="Bold" Margin="0,0,16,6" VerticalAlignment="Center" />
       <WrapPanel VerticalAlignment="Center">
         <TextBlock Text="{Binding L[Language.Label]}" Classes="label" Margin="0,0,8,0" />
         <ComboBox x:Name="LanguageBox" AutomationProperties.AutomationId="LanguageBox" Width="120" Margin="0,0,12,6"
@@ -32,7 +39,7 @@
           <ComboBoxItem Tag="en" Content="English" />
         </ComboBox>
         <Border Background="{StaticResource ControlBackground}" BorderBrush="{StaticResource ControlBorder}"
-                BorderThickness="1" CornerRadius="3" Padding="10,5" Margin="0,0,0,6" Height="32">
+                BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,0,6" Height="26">
           <StackPanel Orientation="Horizontal">
             <Ellipse Width="7" Height="7" Fill="{Binding GamePillBrush}" Margin="0,0,7,0" VerticalAlignment="Center" />
             <TextBlock x:Name="GameStatusLabel" AutomationProperties.AutomationId="GameStatusLabel" Text="{Binding GameStatusText}" FontSize="12" VerticalAlignment="Center" />
@@ -53,49 +60,39 @@
         <!-- Inputs -->
         <Border x:Name="InputsPanel" Grid.Row="0" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}"
                 BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,4,0,0">
-          <Grid RowSpacing="4">
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+          <StackPanel Spacing="6">
+            <controls:FormRow>
+              <TextBlock Text="{Binding L[Replay.Label]}" Classes="label" />
+              <TextBox x:Name="ReplayBox" AutomationProperties.AutomationId="ReplayBox"
+                       Margin="0,0,6,0" Text="{Binding ReplayPath, Mode=TwoWay}" ToolTip.Tip="{Binding ReplayPath}" />
+              <StackPanel Orientation="Horizontal">
+                <Button x:Name="BrowseReplayButton" AutomationProperties.AutomationId="BrowseReplayButton" Content="{Binding L[Browse]}" Click="OnBrowseReplay" />
+                <Button AutomationProperties.AutomationId="LocateButton" Content="{Binding L[Locate]}" Click="OnLocateFromReplay" Margin="0"
+                        ToolTip.Tip="{Binding L[Locate.Tooltip]}" />
+              </StackPanel>
+            </controls:FormRow>
+            <controls:FormRow>
+              <TextBlock Text="{Binding L[Beatmap.Label]}" Classes="label" />
+              <TextBox x:Name="BeatmapBox" AutomationProperties.AutomationId="BeatmapBox"
+                       Margin="0,0,6,0" Text="{Binding BeatmapPath, Mode=TwoWay}" ToolTip.Tip="{Binding BeatmapPath}" />
+              <StackPanel Orientation="Horizontal">
+                <Button x:Name="BrowseBeatmapButton" AutomationProperties.AutomationId="BrowseBeatmapButton" Content="{Binding L[Browse]}" Click="OnBrowseBeatmap" />
+                <Button AutomationProperties.AutomationId="SwapButton" Content="{Binding L[Swap]}" Click="OnSwapPaths" Margin="0"
+                        ToolTip.Tip="{Binding L[Swap.Tooltip]}" />
+              </StackPanel>
+            </controls:FormRow>
+            <controls:FormRow StackActions="True">
+              <TextBlock Text="{Binding L[DetectedScore.Label]}" Classes="label" />
+              <TextBlock Text="{Binding DetectedScoreText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                         ToolTip.Tip="{Binding DetectedScoreText}" />
+              <ComboBox x:Name="ScoreCandidateBox" AutomationProperties.AutomationId="ScoreCandidateBox"
+                        MinWidth="0" HorizontalAlignment="Stretch"
+                        SelectionChanged="OnCandidateSelected" ToolTip.Tip="{Binding L[Candidates.Tooltip]}">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:CandidateItem"><TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+            </controls:FormRow>
 
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding L[Replay.Label]}" Classes="label" />
-            <TextBox x:Name="ReplayBox" AutomationProperties.AutomationId="ReplayBox" Grid.Row="0" Grid.Column="1" Margin="0,0,6,0"
-                     Text="{Binding ReplayPath, Mode=TwoWay}" />
-            <Button x:Name="BrowseReplayButton" AutomationProperties.AutomationId="BrowseReplayButton" Grid.Row="0" Grid.Column="2" Content="{Binding L[Browse]}" Click="OnBrowseReplay" />
-            <Button Grid.Row="0" Grid.Column="3" AutomationProperties.AutomationId="LocateButton" Content="{Binding L[Locate]}" Click="OnLocateFromReplay" Margin="0"
-                    ToolTip.Tip="{Binding L[Locate.Tooltip]}" />
-
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding L[Beatmap.Label]}" Classes="label" />
-            <TextBox x:Name="BeatmapBox" AutomationProperties.AutomationId="BeatmapBox" Grid.Row="1" Grid.Column="1" Margin="0,0,6,0"
-                     Text="{Binding BeatmapPath, Mode=TwoWay}" />
-            <Button x:Name="BrowseBeatmapButton" AutomationProperties.AutomationId="BrowseBeatmapButton" Grid.Row="1" Grid.Column="2" Content="{Binding L[Browse]}" Click="OnBrowseBeatmap" />
-            <Button Grid.Row="1" Grid.Column="3" AutomationProperties.AutomationId="SwapButton" Content="{Binding L[Swap]}" Click="OnSwapPaths" Margin="0"
-                    ToolTip.Tip="{Binding L[Swap.Tooltip]}" />
-
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding L[DetectedScore.Label]}" Classes="label" />
-            <Border Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Background="#FF2D2D30" CornerRadius="3"
-                    Padding="8,5" Margin="0,2,0,4">
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <ComboBox x:Name="ScoreCandidateBox" AutomationProperties.AutomationId="ScoreCandidateBox" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch" Margin="8,0,0,0"
-                           SelectionChanged="OnCandidateSelected"
-                          ToolTip.Tip="{Binding L[Candidates.Tooltip]}">
-                  <ComboBox.ItemTemplate><DataTemplate x:DataType="vm:CandidateItem"><TextBlock Text="{Binding Display}" /></DataTemplate></ComboBox.ItemTemplate>
-                </ComboBox>
-                <TextBlock Text="{Binding DetectedScoreText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-              </Grid>
-            </Border>
-
-            <WrapPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="4" Margin="0,8,0,0">
+            <WrapPanel Margin="0,2,0,0">
               <CheckBox x:Name="AutoDetectToggle" AutomationProperties.AutomationId="AutoDetectToggle" Content="{Binding L[AutoDetect]}" IsChecked="{Binding AutoDetectFromGame, Mode=TwoWay}"
                         ToolTip.Tip="{Binding L[AutoDetect.Tooltip]}" />
               <CheckBox Content="{Binding L[AutoStart]}" IsChecked="{Binding AutoStartRender, Mode=TwoWay}"
@@ -104,80 +101,77 @@
                         ToolTip.Tip="{Binding L[ReadMemory.Tooltip]}" />
               <CheckBox Content="{Binding L[DebugLogging]}" IsChecked="{Binding DebugLogging, Mode=TwoWay}" />
             </WrapPanel>
-          </Grid>
+          </StackPanel>
         </Border>
 
         <!-- Parameters -->
         <Border x:Name="ParametersPanel" Grid.Row="1" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}"
                 BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,8,0,0">
-          <Grid>
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <WrapPanel Grid.ColumnSpan="3">
-            <Grid Width="252" Margin="0,0,12,6">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="82" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{Binding L[Speed]}" Classes="label" />
-              <Grid Grid.Column="1"><Slider Margin="0,0,32,0" x:Name="SpeedSlider" AutomationProperties.AutomationId="SpeedSlider" Minimum="1" Maximum="100"
-                      IsSnapToTickEnabled="True" TickFrequency="1" ToolTip.Tip="{Binding L[Speed.Tooltip]}"
-                      Value="{Binding Speed, Mode=TwoWay}" />
-                <TextBlock Text="{Binding Speed}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid>
-            </Grid>
-            <Grid Width="252" Margin="0,0,12,6">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="82" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{Binding L[Width]}" Classes="label" />
-              <Grid Grid.Column="1"><TextBox x:Name="WidthBox" AutomationProperties.AutomationId="WidthBox" Text="{Binding Width, Mode=TwoWay}" /></Grid>
-            </Grid>
-            <Grid Width="252" Margin="0,0,12,6">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="82" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{Binding L[Height]}" Classes="label" />
-              <Grid Grid.Column="1"><TextBox x:Name="HeightBox" AutomationProperties.AutomationId="HeightBox" Text="{Binding Height, Mode=TwoWay}" /></Grid>
-            </Grid>
-            <Grid Width="252" Margin="0,0,12,6">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="82" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{Binding L[FPS]}" Classes="label" />
-              <Grid Grid.Column="1"><TextBox x:Name="FpsBox" AutomationProperties.AutomationId="FpsBox"
-                     Text="{Binding FramePerSecond, Mode=TwoWay}" /></Grid>
-            </Grid>
-            <Grid Width="252" Margin="0,0,12,6">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="82" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{Binding L[Codec]}" Classes="label" />
-              <Grid Grid.Column="1">
-              <AutoCompleteBox x:Name="CodecBox" AutomationProperties.AutomationId="CodecBox" MinWidth="0" Padding="4,3,30,3"
-                      MinimumPrefixLength="0" FilterMode="None" IsTextCompletionEnabled="False" ItemsSource="{Binding CodecChoices}" ToolTip.Tip="{Binding L[Codec.Tooltip]}"
-                      Text="{Binding Codec, Mode=TwoWay}" />
-              <Button AutomationProperties.AutomationId="CodecDropDownButton" AutomationProperties.Name="{Binding L[Codec]}"
-                      Width="28" MinWidth="0" Height="30" MinHeight="0" Margin="1" Padding="0"
-                      HorizontalAlignment="Right" VerticalAlignment="Center" Focusable="False"
-                      Background="Transparent" BorderThickness="0" Click="OnCodecDropDown" ToolTip.Tip="{Binding L[Codec.Tooltip]}">
-                <Path Data="M 0 0 L 4 4 L 8 0" Stroke="{StaticResource TextPrimary}" StrokeThickness="1.5"
-                      Width="8" Height="4" />
-              </Button></Grid>
-            </Grid>
-            <Grid Width="252" Margin="0,0,12,6">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="82" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{Binding L[Preset]}" Classes="label" />
-              <Grid Grid.Column="1"><ComboBox HorizontalAlignment="Stretch" x:Name="PresetBox" AutomationProperties.AutomationId="PresetBox"
-                      ItemsSource="{Binding PresetChoices}" IsEnabled="{Binding CanSelectPreset}"
-                      ToolTip.Tip="{Binding L[Preset.Tooltip]}"
-                      SelectedItem="{Binding CodecPreset, Mode=TwoWay}" /></Grid>
-            </Grid>
-            </WrapPanel>
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding L[Output]}" Classes="label" />
-            <TextBox x:Name="OutputBox" AutomationProperties.AutomationId="OutputBox" Grid.Row="1" Grid.Column="1" Text="{Binding OutputDir, Mode=TwoWay}" Margin="0,6,6,0" />
-            <Button Grid.Row="1" Grid.Column="2" AutomationProperties.AutomationId="OpenOutputButton" Content="{Binding L[OpenOutput]}" HorizontalAlignment="Stretch"
-                    Click="OnOpenOutputDir" Margin="0,6,6,0" />
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="FFmpeg" Classes="label" />
-            <TextBox x:Name="FfmpegPathBox" AutomationProperties.AutomationId="FfmpegPathBox" Grid.Row="2" Grid.Column="1"
-                     IsReadOnly="True" Text="{Binding FfmpegPath}" PlaceholderText="{Binding L[Ffmpeg.Builtin]}" ToolTip.Tip="{Binding L[Ffmpeg.Tooltip]}" Margin="0,6,6,0" />
-            <WrapPanel Grid.Row="2" Grid.Column="2" IsEnabled="{Binding CanChangeFfmpeg}" Margin="0,6,6,0">
-              <Button AutomationProperties.AutomationId="BrowseFfmpegButton" Content="{Binding L[Browse]}" Click="OnBrowseFfmpeg" HorizontalAlignment="Stretch" />
-              <Button AutomationProperties.AutomationId="ResetFfmpegButton" Content="{Binding L[Ffmpeg.Reset]}" Click="OnResetFfmpeg" HorizontalAlignment="Stretch" />
-            </WrapPanel>
-          </Grid>
+          <StackPanel Spacing="6">
+            <controls:AdaptiveGrid x:Name="ParameterFields">
+              <Grid ColumnDefinitions="76,*">
+                <TextBlock Text="{Binding L[Speed]}" Classes="label" />
+                <Grid Grid.Column="1"><Slider Margin="0,0,32,0" x:Name="SpeedSlider" AutomationProperties.AutomationId="SpeedSlider" Minimum="1" Maximum="100"
+                        IsSnapToTickEnabled="True" TickFrequency="1" ToolTip.Tip="{Binding L[Speed.Tooltip]}"
+                        Value="{Binding Speed, Mode=TwoWay}" />
+                  <TextBlock Text="{Binding Speed}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid>
+              </Grid>
+              <Grid ColumnDefinitions="76,*">
+                <TextBlock Text="{Binding L[Width]}" Classes="label" />
+                <Grid Grid.Column="1"><TextBox x:Name="WidthBox" AutomationProperties.AutomationId="WidthBox" Text="{Binding Width, Mode=TwoWay}" /></Grid>
+              </Grid>
+              <Grid ColumnDefinitions="76,*">
+                <TextBlock Text="{Binding L[Height]}" Classes="label" />
+                <Grid Grid.Column="1"><TextBox x:Name="HeightBox" AutomationProperties.AutomationId="HeightBox" Text="{Binding Height, Mode=TwoWay}" /></Grid>
+              </Grid>
+              <Grid ColumnDefinitions="76,*">
+                <TextBlock Text="{Binding L[FPS]}" Classes="label" />
+                <Grid Grid.Column="1"><TextBox x:Name="FpsBox" AutomationProperties.AutomationId="FpsBox"
+                       Text="{Binding FramePerSecond, Mode=TwoWay}" /></Grid>
+              </Grid>
+              <Grid ColumnDefinitions="76,*">
+                <TextBlock Text="{Binding L[Codec]}" Classes="label" />
+                <Grid Grid.Column="1">
+                <AutoCompleteBox x:Name="CodecBox" AutomationProperties.AutomationId="CodecBox" MinWidth="0" Padding="6,2,26,2"
+                        MinimumPrefixLength="0" FilterMode="None" IsTextCompletionEnabled="False" ItemsSource="{Binding CodecChoices}" ToolTip.Tip="{Binding L[Codec.Tooltip]}"
+                        Text="{Binding Codec, Mode=TwoWay}" />
+                <Button AutomationProperties.AutomationId="CodecDropDownButton" AutomationProperties.Name="{Binding L[Codec]}"
+                        Width="24" MinWidth="0" Height="24" MinHeight="0" Margin="1" Padding="0"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Focusable="False"
+                        Background="Transparent" BorderThickness="0" Click="OnCodecDropDown" ToolTip.Tip="{Binding L[Codec.Tooltip]}">
+                  <Path Data="M 0 0 L 4 4 L 8 0" Stroke="{StaticResource TextPrimary}" StrokeThickness="1.5"
+                        Width="8" Height="4" />
+                </Button></Grid>
+              </Grid>
+              <Grid ColumnDefinitions="76,*">
+                <TextBlock Text="{Binding L[Preset]}" Classes="label" />
+                <Grid Grid.Column="1"><ComboBox HorizontalAlignment="Stretch" x:Name="PresetBox" AutomationProperties.AutomationId="PresetBox"
+                        ItemsSource="{Binding PresetChoices}" IsEnabled="{Binding CanSelectPreset}"
+                        ToolTip.Tip="{Binding L[Preset.Tooltip]}"
+                        SelectedItem="{Binding CodecPreset, Mode=TwoWay}" /></Grid>
+              </Grid>
+            </controls:AdaptiveGrid>
+            <controls:FormRow>
+              <TextBlock Text="{Binding L[Output]}" Classes="label" />
+              <TextBox x:Name="OutputBox" AutomationProperties.AutomationId="OutputBox" Margin="0,0,6,0" Text="{Binding OutputDir, Mode=TwoWay}" ToolTip.Tip="{Binding OutputDir}" />
+              <StackPanel Orientation="Horizontal">
+                <Button AutomationProperties.AutomationId="OpenOutputButton" Content="{Binding L[OpenOutput]}" Click="OnOpenOutputDir" Margin="0" />
+              </StackPanel>
+            </controls:FormRow>
+            <controls:FormRow>
+              <TextBlock Text="FFmpeg" Classes="label" />
+              <TextBox x:Name="FfmpegPathBox" AutomationProperties.AutomationId="FfmpegPathBox" IsReadOnly="True"
+                       Margin="0,0,6,0" Text="{Binding FfmpegPath}" PlaceholderText="{Binding L[Ffmpeg.Builtin]}" ToolTip.Tip="{Binding L[Ffmpeg.Tooltip]}" />
+              <StackPanel Orientation="Horizontal" IsEnabled="{Binding CanChangeFfmpeg}">
+                <Button AutomationProperties.AutomationId="BrowseFfmpegButton" Content="{Binding L[Browse]}" Click="OnBrowseFfmpeg" />
+                <Button AutomationProperties.AutomationId="ResetFfmpegButton" Content="{Binding L[Ffmpeg.Reset]}" Click="OnResetFfmpeg" Margin="0" />
+              </StackPanel>
+            </controls:FormRow>
+          </StackPanel>
         </Border>
 
         <!-- Log -->
-        <Border Grid.Row="2" MinHeight="120" Background="#FF141414" BorderBrush="{StaticResource PanelBorder}"
+        <Border x:Name="LogPanel" Grid.Row="2" MinHeight="96" Background="#FF141414" BorderBrush="{StaticResource PanelBorder}"
                 BorderThickness="1" CornerRadius="4" Margin="0,8,0,0">
           <ListBox x:Name="LogBox" AutomationProperties.AutomationId="LogBox" Background="Transparent" BorderThickness="0" Foreground="#FFCFCFCF"
                    FontFamily="Consolas" FontSize="12"
@@ -191,13 +185,13 @@
     <!-- Progress -->
     <Grid Grid.Row="2" Margin="0,8,0,0">
       <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-      <ProgressBar Grid.Column="0" Height="18" Minimum="0" Maximum="100" Value="{Binding Progress}" />
+      <ProgressBar Grid.Column="0" Height="6" Minimum="0" Maximum="100" Value="{Binding Progress}" />
       <TextBlock Grid.Row="1" Margin="0,4,0,0" VerticalAlignment="Center"
-                 Text="{Binding ProgressText}" TextWrapping="Wrap" />
+                 Text="{Binding ProgressText}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ProgressText}" />
     </Grid>
 
     <!-- Actions -->
-    <Grid Grid.Row="3" RowDefinitions="Auto,Auto" Margin="0,10,0,0">
+    <Grid Grid.Row="3" RowDefinitions="Auto,Auto" Margin="0,8,0,0">
       <WrapPanel>
       <Button x:Name="RenderButton" AutomationProperties.AutomationId="RenderButton" Content="{Binding L[Render]}" Click="OnRender" IsEnabled="{Binding CanRender}" FontWeight="SemiBold" />
       <Button x:Name="JudgeOnlyButton" AutomationProperties.AutomationId="JudgeOnlyButton" Content="{Binding L[JudgeOnly]}" Click="OnJudgeOnly" IsEnabled="{Binding CanRender}"

@@ -14,10 +14,10 @@ public readonly record struct WindowSizing(double Width, double Height, double M
         var height = pixelHeight / scaling;
         var availableWidth = Math.Max(1, width - 24);
         var availableHeight = Math.Max(1, height - 24);
-        var minWidth = Math.Min(560, availableWidth);
-        var minHeight = Math.Min(360, availableHeight);
-        return new WindowSizing(Math.Max(minWidth, Math.Min(960, Math.Min(width * .85, availableWidth))),
-            Math.Max(minHeight, Math.Min(680, Math.Min(height * .88, availableHeight))),
+        var minWidth = Math.Min(480, availableWidth);
+        var minHeight = Math.Min(320, availableHeight);
+        return new WindowSizing(Math.Max(minWidth, Math.Min(900, Math.Min(width * .85, availableWidth))),
+            Math.Max(minHeight, Math.Min(620, Math.Min(height * .88, availableHeight))),
             minWidth, minHeight, availableWidth, availableHeight);
     }
 }

@@ -10,50 +10,54 @@
     <SolidColorBrush x:Key="ControlBorder" Color="#777780" />
   </Application.Resources>
   <Application.Styles>
-    <FluentTheme />
+    <FluentTheme DensityStyle="Compact" />
     <Style Selector="TextBlock.label">
       <Setter Property="Foreground" Value="{StaticResource TextSecondary}" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="Margin" Value="0,0,8,0" />
     </Style>
     <Style Selector="Button">
-      <Setter Property="Height" Value="32" />
-      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="MinHeight" Value="26" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
-      <Setter Property="Padding" Value="12,5" />
+      <Setter Property="Padding" Value="10,3" />
       <Setter Property="Margin" Value="0,0,6,0" />
-      <Setter Property="MinWidth" Value="72" />
+      <Setter Property="MinWidth" Value="60" />
     </Style>
     <Style Selector="CheckBox">
-      <Setter Property="Margin" Value="0,0,8,4" />
-      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Margin" Value="0,0,12,2" />
+      <Setter Property="MinHeight" Value="26" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style Selector="ComboBox">
-      <Setter Property="Height" Value="32" />
-      <Setter Property="MinHeight" Value="32" />
-      <Setter Property="Padding" Value="8,3" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="6,2" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
     <Style Selector="TextBox">
-      <Setter Property="Height" Value="32" />
-      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="MinHeight" Value="26" />
       <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Padding" Value="4,3" />
+      <Setter Property="Padding" Value="6,2" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="AutoCompleteBox">
-      <Setter Property="Height" Value="32" />
-      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="MinHeight" Value="26" />
       <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Padding" Value="4,3" />
+      <Setter Property="Padding" Value="6,2" />
+    </Style>
+    <Style Selector="ListBoxItem">
+      <Setter Property="MinHeight" Value="22" />
+      <Setter Property="Padding" Value="8,2" />
     </Style>
     <Style Selector="Slider">
-      <Setter Property="Height" Value="32" />
-      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Height" Value="26" />
+      <Setter Property="MinHeight" Value="26" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
   </Application.Styles>

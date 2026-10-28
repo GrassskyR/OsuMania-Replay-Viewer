@@ -13,6 +13,7 @@ using ManiaReplayMaster.Presentation;
 using ManiaReplayMaster.Desktop;
 
 var screenshotDirectory = Environment.GetEnvironmentVariable("MRM_LAYOUT_SCREENSHOTS");
+using var preferences = new RestorePreferences();
 var builder = AppBuilder.Configure<App>();
 if (screenshotDirectory is not null) builder = builder.UseSkia();
 builder.UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = screenshotDirectory is null }).SetupWithoutStarting();
@@ -109,14 +110,21 @@ void CheckResponsiveLayout()
             throw new Exception($"Window does not fit {width}x{height} at {scaling:P0}.");
     }
     var defaultSize = WindowSizing.ForWorkArea(1920, 1040, 1);
-    if (defaultSize.Width != 960 || defaultSize.Height != 680)
+    if (defaultSize.Width != 900 || defaultSize.Height != 620)
         throw new Exception("1080p default window is no longer compact.");
 
     var scroll = window.FindControl<ScrollViewer>("ContentScroll")!;
     var parameterFields = new[] { "SpeedSlider", "WidthBox", "HeightBox", "FpsBox", "CodecBox", "PresetBox" };
-    foreach (var (width, height, scaling) in new[] { (960, 680, 1d), (960, 680, 1.25), (816, 450, 1.5), (640, 420, 1.75), (560, 360, 2d) })
+    var savedLanguage = vm.L.Preference;
+    foreach (var language in new[] { "en", "zh-Hans" })
+    foreach (var (width, height, scaling) in new[] { (900, 620, 1d), (900, 620, 1.25), (816, 450, 1.5),
+        (700, 500, 1.75), (640, 420, 1.75), (559, 420, 2d), (560, 360, 2d), (480, 320, 2.5), (431, 320, 3d), (1200, 800, 1d) })
     {
+        window.FindControl<ComboBox>("LanguageBox")!.SelectedIndex = language == "en" ? 2 : 1;
+        scroll.Offset = default;
         window.SetRenderScaling(scaling);
+        // ApplyScreenBounds also lowers the minimum when a monitor has fewer logical pixels.
+        window.MinWidth = Math.Min(480, width);
         window.Width = width;
         window.Height = height;
         Dispatcher.UIThread.RunJobs();
@@ -137,35 +145,60 @@ void CheckResponsiveLayout()
             if (point.Y < 0 || point.Y + control.Bounds.Height > window.ClientSize.Height + 1)
                 throw new Exception($"{name} is not visible at {width}x{height}, {scaling:P0}.");
         }
+        var replayBox = window.FindControl<TextBox>("ReplayBox")!;
+        if (replayBox.Bounds.Height > 27 || replayBox.Bounds.Height < 25)
+            throw new Exception("Compact control density was lost.");
+        foreach (var row in window.GetVisualDescendants().OfType<ManiaReplayMaster.Desktop.Controls.FormRow>())
+        {
+            var editor = row.Children[1];
+            var actions = row.Children[2];
+            if (editor.Bounds.Intersects(actions.Bounds))
+                throw new Exception($"Editor overlaps actions at {width}x{height}, {language}.");
+            if (width < 560 && editor.Bounds.Y <= row.Children[0].Bounds.Y)
+                throw new Exception($"Narrow form label did not move above editor at {width}x{height}.");
+        }
         var speed = window.FindControl<Slider>("SpeedSlider")!.TranslatePoint(default, window)!.Value;
         var heightBox = window.FindControl<TextBox>("HeightBox")!.TranslatePoint(default, window)!.Value;
-        if (width == 960 && Math.Abs(speed.Y - heightBox.Y) > 1)
+        if (width >= 700 && Math.Abs(speed.Y - heightBox.Y) > 1)
             throw new Exception("Wide window did not arrange three fields per row.");
-        if (width == 560 && heightBox.Y <= speed.Y)
+        if (width <= 640 && heightBox.Y <= speed.Y)
             throw new Exception("Narrow window did not wrap parameter fields.");
-        if (height == 360 && scroll.Extent.Height <= scroll.Viewport.Height)
+        if (height <= 360 && scroll.Extent.Height <= scroll.Viewport.Height)
             throw new Exception("Small window did not make settings scrollable.");
+        if (width == 900 && height == 620 && scroll.Extent.Height > scroll.Viewport.Height + 1)
+            throw new Exception($"Default window unnecessarily scrolls in {language}.");
+        if (width == 431)
+        {
+            var widthBox = window.FindControl<TextBox>("WidthBox")!.TranslatePoint(default, window)!.Value;
+            if (widthBox.Y <= speed.Y) throw new Exception("Very narrow parameters did not use one column.");
+        }
+        var fields = window.FindControl<Panel>("ParameterFields")!;
+        var firstRow = fields.Children.Where(c => Math.Abs(c.Bounds.Y) < 1).ToArray();
+        if (fields.Bounds.Width - firstRow.Max(c => c.Bounds.Right) > 1)
+            throw new Exception("Parameter fields left unused space at the end of a row.");
         if (screenshotDirectory is not null)
         {
             Directory.CreateDirectory(screenshotDirectory);
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
             using var frame = window.GetLastRenderedFrame()!;
-            frame.Save(Path.Combine(screenshotDirectory, $"layout-{width}x{height}-{scaling}.png"),
+            frame.Save(Path.Combine(screenshotDirectory, $"layout-{language}-{width}x{height}-{scaling}.png"),
                 Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
         }
+        scroll.Offset = new Vector(0, scroll.Extent.Height);
+        Dispatcher.UIThread.RunJobs();
+        var log = window.FindControl<ListBox>("LogBox")!;
+        var logPoint = log.TranslatePoint(default, window)!.Value;
+        if (logPoint.Y < 0 || logPoint.Y + log.Bounds.Height > window.ClientSize.Height)
+            throw new Exception("Log cannot be reached by scrolling the compact window.");
     }
-    scroll.Offset = new Vector(0, scroll.Extent.Height);
-    Dispatcher.UIThread.RunJobs();
-    var log = window.FindControl<ListBox>("LogBox")!;
-    var logPoint = log.TranslatePoint(default, window)!.Value;
-    if (logPoint.Y < 0 || logPoint.Y + log.Bounds.Height > window.ClientSize.Height)
-        throw new Exception("Log cannot be reached by scrolling the compact window.");
+    window.FindControl<ComboBox>("LanguageBox")!.SelectedIndex = savedLanguage switch { "zh-Hans" => 1, "en" => 2, _ => 0 };
+    window.MinWidth = 480;
     window.SetRenderScaling(1);
-    window.Width = 960;
-    window.Height = 680;
+    window.Width = 900;
+    window.Height = 620;
     scroll.Offset = default;
     Dispatcher.UIThread.RunJobs();
-    Console.WriteLine("PASS work-area sizing (28 resolution/DPI combinations), responsive fields, pinned actions and scrollable log (5 layouts)");
+    Console.WriteLine("PASS work-area sizing (28 resolution/DPI combinations), compact density, responsive fields, pinned actions and scrollable log (20 bilingual layouts)");
 }
 
 void PumpTask(Task task)
@@ -189,4 +222,21 @@ void PumpUntil(Func<bool> complete)
 public sealed class EncoderChoice
 {
     public string Codec { get; set; } = "libx264";
+}
+
+// The window shares the process-wide localizer. Restore its persisted preferences even on assertion failure.
+public sealed class RestorePreferences : IDisposable
+{
+    private readonly string _path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "ManiaReplayViewer", "ui-settings.json");
+    private readonly byte[]? _bytes;
+
+    public RestorePreferences() => _bytes = File.Exists(_path) ? File.ReadAllBytes(_path) : null;
+
+    public void Dispose()
+    {
+        if (_bytes is null) File.Delete(_path);
+        else if (!File.Exists(_path) || !File.ReadAllBytes(_path).SequenceEqual(_bytes))
+            File.WriteAllBytes(_path, _bytes);
+    }
 }

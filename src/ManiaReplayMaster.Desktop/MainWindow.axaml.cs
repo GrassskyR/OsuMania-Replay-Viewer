@@ -51,6 +51,7 @@ public partial class MainWindow : Window
         ScalingChanged += (_, _) => QueueScreenUpdate();
         Screens.Changed += OnScreensChanged;
         Closed += (_, _) => Screens.Changed -= OnScreensChanged;
+        SizeChanged += (_, _) => Classes.Set("narrow", ClientSize.Width < 560);
         LayoutUpdated += (_, _) => UpdateContentHeight();
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
@@ -115,7 +116,8 @@ public partial class MainWindow : Window
         // Give the star-sized log a finite viewport so its own list stays virtualized.
         // When settings wrap, the outer viewer scrolls while actions stay visible.
         var height = Math.Max(ContentScroll.Viewport.Height,
-            InputsPanel.DesiredSize.Height + ParametersPanel.DesiredSize.Height + 128);
+            InputsPanel.DesiredSize.Height + ParametersPanel.DesiredSize.Height
+            + LogPanel.MinHeight + LogPanel.Margin.Top + LogPanel.Margin.Bottom);
         if (double.IsNaN(ContentGrid.Height) || Math.Abs(ContentGrid.Height - height) > .5)
             ContentGrid.Height = height;
     }
