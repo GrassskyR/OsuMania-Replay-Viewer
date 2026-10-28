@@ -1,6 +1,6 @@
 # Export profiling
 
-This harness runs the same preparation, renderer and encoder used by the WPF export. It leaves
+This harness runs the same preparation, renderer and encoder used by the Avalonia desktop export. It leaves
 images, videos, FFmpeg commands/benchmark output and `timings.json` in the output directory.
 Use a fresh output directory for each comparison. Defaults are 540×960, 60 FPS, speed 20 and
 CPU encoding so GPU availability does not change between runs.

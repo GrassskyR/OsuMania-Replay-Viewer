@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
-using ManiaReplayMaster.App;
+using ManiaReplayMaster.Presentation;
 
 namespace ManiaReplayMaster.Desktop;
 
@@ -19,9 +19,9 @@ public partial class App : Application
         Dispatcher.UIThread.UnhandledException += (_, args) =>
         {
             CrashLog.Write(args.Exception);
-            // Keep the error visible without a second modal dispatcher or a WPF dependency.
+            // Keep the error visible without a second modal dispatcher.
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: MainWindow main })
-                main.ViewModel.Log(ManiaReplayMaster.App.Localization.Localizer.Text("Crash.Message", args.Exception.Message, CrashLog.LastPath));
+                main.ViewModel.Log(ManiaReplayMaster.Presentation.Localization.Localizer.Text("Crash.Message", args.Exception.Message, CrashLog.LastPath));
             args.Handled = true;
         };
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

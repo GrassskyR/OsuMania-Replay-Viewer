@@ -1,9 +1,9 @@
 using System.IO;
 using ManiaReplayMaster.Game;
 using ManiaReplayMaster.Game.Memory;
-using static ManiaReplayMaster.App.Localization.Localizer;
+using static ManiaReplayMaster.Presentation.Localization.Localizer;
 
-namespace ManiaReplayMaster.App;
+namespace ManiaReplayMaster.Presentation;
 
 /// <summary>What auto-detection produced, in UI-friendly terms.</summary>
 public sealed class AutoDetectResult
@@ -125,7 +125,7 @@ internal sealed class GameBridge : IDisposable
     }
 
     /// <summary>
-    /// Returns the latest background memory observation without scanning on the WPF dispatcher.
+    /// Returns the latest background memory observation without scanning on the UI dispatcher.
     /// </summary>
     public GameSnapshot PollSnapshot()
     {

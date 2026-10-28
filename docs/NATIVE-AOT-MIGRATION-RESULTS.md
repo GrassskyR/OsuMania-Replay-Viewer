@@ -2,7 +2,13 @@
 
 日期：2026-10-20。分支：`codex/native-aot-migration`，起点 `e1ec981`。原计划是用户提供的未跟踪文件，保留原文。
 
-## 当前结论
+## 2026-10-28 更新
+
+按维护决策移除 WPF 参照项目及专用冒烟脚本，Avalonia 成为唯一桌面入口。`app`/`desktop` 启动 Avalonia，`publish`/`publish-aot` 统一生成 Native AOT ZIP；CI 和 Release 不再构建或分发旧 WPF 目录包及单文件包。应用清单迁入 Desktop，共用状态与资源命名空间统一为 Presentation。下文为迁移期间的历史验证记录；未完成的实机验收仍需独立验证。
+
+本次验证：Release 解决方案构建通过；25 项非端到端测试通过；Headless 中英文资源加载、28 组分辨率/DPI 尺寸计算、5 种窗口布局及编码器菜单交互通过；实际执行新的 `publish` 命令生成 Native AOT ZIP，并通过包审计。JIT 入口的运行时配置仅引用 Microsoft.NETCore.App。构建仍有既有 SharpCompress NU1902 警告。本次未重跑桌面 UI Automation 或 Windows Sandbox 验收。
+
+## 迁移时结论
 
 完整 Avalonia 桌面入口已实现并成功 Native AOT 发布，原生 GUI 实际完成判定、导出和生命周期回归。Core、Render/Encode、Game 分阶段验证后才迁移完整界面。完整 ZIP 同口径由 95.597 MiB 降到约 52.505 MiB，减少约 45.1%。
 

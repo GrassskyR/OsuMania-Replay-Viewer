@@ -1,4 +1,4 @@
-namespace ManiaReplayMaster.App;
+namespace ManiaReplayMaster.Presentation;
 
 public static class CrashLog
 {

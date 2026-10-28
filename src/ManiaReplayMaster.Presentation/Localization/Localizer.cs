@@ -2,11 +2,11 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Resources;
 
-namespace ManiaReplayMaster.App.Localization;
+namespace ManiaReplayMaster.Presentation.Localization;
 
 public sealed class Localizer : INotifyPropertyChanged
 {
-    private static readonly ResourceManager Resources = new("ManiaReplayMaster.App.Localization.Strings", typeof(Localizer).Assembly);
+    private static readonly ResourceManager Resources = new("ManiaReplayMaster.Presentation.Localization.Strings", typeof(Localizer).Assembly);
     public static Localizer Current { get; } = new(CultureInfo.CurrentUICulture, UiSettings.Current);
 
     private readonly CultureInfo _systemCulture;
@@ -36,7 +36,7 @@ public sealed class Localizer : INotifyPropertyChanged
             _settings.SetLanguage(preference);
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Preference)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
-            // WPF observes Item[]; Avalonia compiled indexers observe the CLR property name.
+            // Notify indexer subscribers and Avalonia compiled bindings.
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item"));
         }
     }

@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json.Nodes;
-using ManiaReplayMaster.App;
-using ManiaReplayMaster.App.Localization;
+using ManiaReplayMaster.Presentation;
+using ManiaReplayMaster.Presentation.Localization;
 using ManiaReplayMaster.Core;
 using ManiaReplayMaster.Core.Model;
 using ManiaReplayMaster.Encode;

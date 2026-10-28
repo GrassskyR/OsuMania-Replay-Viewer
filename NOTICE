@@ -8,7 +8,7 @@ C#/.NET port of Mania-Replay-Master v2.4.0:
 https://github.com/Keytoyze/Mania-Replay-Master
 Copyright (c) 2020-present, project contributors.
 Original code licensed under Apache License 2.0 (licenses/Apache-2.0.txt).
-Changes include a native WPF interface, osu!stable integration, localization,
+Changes include an Avalonia interface, osu!stable integration, localization,
 persistent preferences, readable output names and frame cadence corrections.
 
 The osu!stable memory reader and signature/offset tables were developed with

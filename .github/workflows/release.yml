@@ -89,21 +89,15 @@ jobs:
           ./build.ps1 appcheck-headless
       - name: Synthetic x86 memory checks
         run: ./build.ps1 gamecheck -- memory32
-      - name: Publish self-contained application
+      - name: Publish Avalonia Native AOT application
         run: ./build.ps1 publish
       - name: Export and frame cadence tests
         run: |
           $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
-          $env:MRM_FFMPEG = "$PWD/artifacts/win-x64/ffmpeg.exe"
+          $env:MRM_FFMPEG = "$PWD/artifacts/win-x64-aot/ffmpeg.exe"
           $env:MRM_FIXTURE_FFMPEG = "C:/ProgramData/chocolatey/bin/ffmpeg.exe"
           $env:MRM_FFPROBE = "C:/ProgramData/chocolatey/bin/ffprobe.exe"
           ./build.ps1 e2e -- --no-build --no-restore
-      - name: Package self-contained application
-        run: Compress-Archive -Path artifacts/win-x64/* -DestinationPath artifacts/ManiaReplayViewer-win-x64.zip -Force
-      - name: Publish single executable
-        run: ./build.ps1 publish-single
-      - name: Publish complete Native AOT package
-        run: ./build.ps1 publish-aot
       - name: Run published native validation tools
         run: |
           $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
@@ -134,8 +128,6 @@ jobs:
         with:
           name: ManiaReplayViewer-windows-release
           path: |
-            artifacts/ManiaReplayViewer-win-x64.zip
-            artifacts/ManiaReplayViewer-win-x64-single.zip
             artifacts/ManiaReplayViewer-win-x64-aot.zip
             artifacts/ManiaReplayViewer-win-x64-aot.measurements.json
           if-no-files-found: error
@@ -149,7 +141,5 @@ jobs:
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           fail_on_unmatched_files: true
           files: |
-            artifacts/ManiaReplayViewer-win-x64.zip
-            artifacts/ManiaReplayViewer-win-x64-single.zip
             artifacts/ManiaReplayViewer-win-x64-aot.zip
             artifacts/ManiaReplayViewer-win-x64-aot.measurements.json

@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ManiaReplayMaster.Core.Model;
 
-namespace ManiaReplayMaster.App;
+namespace ManiaReplayMaster.Presentation;
 
 /// <summary>Per-user GUI preferences, shared by localization and render controls.</summary>
 public sealed class UiSettings

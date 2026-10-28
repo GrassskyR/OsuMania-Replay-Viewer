@@ -1,6 +1,6 @@
 # Mania Replay Viewer
 
-将 osu!mania、osu!taiko 和 Malody 的回放渲染为 MP4 视频的 Windows 工具。基于 C# / .NET 10；新增 Avalonia Native AOT 桌面入口，保留 WPF 入口供行为回归。
+将 osu!mania、osu!taiko 和 Malody 的回放渲染为 MP4 视频的 Windows 工具。基于 C# / .NET 10，使用 Avalonia UI 框架，发布为 Native AOT 桌面应用。
 
 ## 功能
 
@@ -9,12 +9,13 @@
 - **参数自定义**：可调流速、分辨率、FPS 与编码器；支持仅计算判定（不导出视频）。
 - **外部 FFmpeg**：可选择自己的 FFmpeg，检测 NVENC / QSV / AMF 硬件编码；内置精简版使用 libx264。
 - **开箱即用**：内置中英文切换与配置记忆，按 `玩家 - 歌曲 [难度]` 格式自动命名导出文件。
+- **窗口自适应**：默认约 960×680（逻辑尺寸），根据当前显示器的可用区域和 DPI 缩放收缩；跨屏时自动避让屏幕边界，窄窗口参数换行，小窗口内容可滚动，底部操作按钮保持可见。
 
 ## 使用说明
 
-支持 **Windows 10/11 x64**。Native AOT 包 `ManiaReplayViewer-win-x64-aot.zip` 解压后运行，无需安装 .NET；请保留同目录的全部本机 DLL、`ffmpeg.exe` 与许可证，支持离线导出。旧 WPF 包仍自带 .NET 运行时。
+支持 **Windows 10/11 x64**。Native AOT 包 `ManiaReplayViewer-win-x64-aot.zip` 解压后运行，无需安装 .NET；请保留同目录的全部本机 DLL、`ffmpeg.exe` 与许可证，支持离线导出。
 
-1. AOT 包启动 `ManiaReplayViewer.exe`；旧 WPF 包启动 `ManiaReplayMaster.exe`。
+1. 启动 `ManiaReplayViewer.exe`。
 2. **加载回放**：拖入 `.osr` / `.mr` 文件。osu! 谱面会根据 MD5 自动定位，找不到时需手动选择 `.osu` / `.osz`（Malody 对应 `.mc` / `.mcz`）。
    - *自动联动*：打开 osu!stable 并开启界面的自动检测，进入成绩结算画面即可自动加载（仅支持 stable，不支持 lazer，且本地需有对应 `.osr` 文件）。
 3. **导出**：调整参数后点击“渲染视频”。点击“仅判定”可跳过视频生成，直接查看判定统计。
@@ -32,17 +33,17 @@
 ```powershell
 ./build.ps1 build          # Release 构建
 ./tools/ffmpeg/build-minimal.ps1 # 构建内置精简 FFmpeg；默认 MSYS2 位于 C:/msys64
-./build.ps1 desktop        # Avalonia 开发入口（JIT）
-./build.ps1 publish-aot    # 全新 staging 原生发布及 ZIP (artifacts/win-x64-aot/)
+./build.ps1 app            # Avalonia 开发入口（JIT）
+./build.ps1 desktop        # app 的别名
+./build.ps1 publish        # 全新 staging 原生发布及 ZIP (artifacts/win-x64-aot/)
+./build.ps1 publish-aot    # publish 的别名
 ./build.ps1 app-aot        # 发布并启动 Native AOT GUI
 ./build.ps1 aotcheck       # 发布并运行原生 CLI/渲染/缓存/x86 内存回归
 ./build.ps1 appcheck-aot   # 对发布的原生 GUI 做 UI Automation 冒烟
 ./build.ps1 appcheck-headless # 无系统窗口的编码器菜单回归
-./build.ps1 app            # 保留的 WPF 参照入口
+./build.ps1 appcheck       # 构建 Avalonia 并进行 JIT GUI 冒烟
 ./build.ps1 test           # 运行单元测试（无需 FFmpeg）
 ./build.ps1 e2e            # 运行视频导出等端到端测试（需 FFmpeg）
-./build.ps1 publish        # 发布自包含目录 (artifacts/win-x64/)
-./build.ps1 publish-single # 发布单文件版及打包 ZIP (artifacts/win-x64-single/)
 ```
 
 常用诊断与 CLI 命令：
@@ -59,7 +60,7 @@
 
 ### Native AOT 验收与排错
 
-实施证据、完整体积对比及未覆盖环境见 [迁移结果](docs/NATIVE-AOT-MIGRATION-RESULTS.md)。默认 `app/publish` 暂保留 WPF，待干净 Windows 无 .NET 环境等最终验收通过后再切换。Native AOT 并非只有一个 EXE：Skia、HarfBuzz 与 ANGLE 本机 DLL 属于 UI 依赖。缺少 DLL 时请重新完整解压；发布环境找不到 link.exe/Windows SDK 时安装 C++ 桌面生成工具。
+实施证据、完整体积对比及未覆盖环境见 [迁移结果](docs/NATIVE-AOT-MIGRATION-RESULTS.md)。WPF 入口已移除，`app` 启动 Avalonia，`publish` 生成 Native AOT 包；旧的 `publish-single` 命令已移除。Native AOT 并非只有一个 EXE：Skia、HarfBuzz 与 ANGLE 本机 DLL 属于 UI 依赖。缺少 DLL 时请重新完整解压；发布环境找不到 link.exe/Windows SDK 时安装 C++ 桌面生成工具。
 
 `publish-aot` 只打包新 staging；目录、ZIP 和清单全部通过审计后一起替换，替换失败时回滚。旧输出整套保留在 `artifacts/win-x64-aot.previous-*/`，不会删除其中的用户导出视频。导出目录可在界面修改，建议放在发布目录之外。ZIP 用 DEFLATE level 6，文件清单/体积/SHA-256 写入同名 `.measurements.json`。
 
@@ -79,7 +80,6 @@
 | `src/ManiaReplayMaster.Game` | osu! 数据库解析与内存读取 |
 | `src/ManiaReplayMaster.Desktop` | Avalonia 编译绑定 / Native AOT 界面 |
 | `src/ManiaReplayMaster.Presentation` | 共用状态、设置、游戏适配与本地化 |
-| `src/ManiaReplayMaster.App` | 保留的 WPF 参照界面 |
 | `src/ManiaReplayMaster.Cli` | 命令行解析与判定工具 |
 | `docs/FORMATS.md` | 数据库格式与内存偏移维护说明 |
 

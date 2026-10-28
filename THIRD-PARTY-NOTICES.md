@@ -17,7 +17,7 @@ tosu: Copyright (C) 2023-2026 Mikhail Babynichev and contributors.
 gosumemory: l3lackShark and contributors.
 
 The C# files are modified implementations, not unmodified upstream distributions.
-The port uses .NET/Avalonia/GDI+ (with a retained WPF reference entry), adds process integration and localization, and changes
+The port uses .NET/Avalonia/GDI+, adds process integration and localization, and changes
 output naming, error handling, cancellation and scroll compositing. Apache source
 attribution is preserved in [NOTICE](NOTICE); LGPL/GPL-derived material is covered
 by the project-wide GPL-3.0 terms.
@@ -34,7 +34,6 @@ by the project-wide GPL-3.0 terms.
 | [Avalonia ANGLE](https://github.com/AvaloniaUI/angle) | 2.1.27548.20260419 | BSD and third-party notices from package LICENSE in `licenses/packages/` |
 | [System.Drawing.Common](https://github.com/dotnet/winforms) | 10.0.0 | MIT and third-party notices in `licenses/packages/` |
 | [.NET Native AOT runtime](https://github.com/dotnet/runtime) | 10.0.13 (SDK 10.0.402) | MIT and runtime ThirdPartyNotices in `licenses/packages/` |
-| .NET Windows Desktop Runtime (WPF reference package only) | .NET 10 | Microsoft runtime LICENSE and ThirdPartyNotices retained in legacy self-contained output |
 
 Test-only dependencies (xUnit and Microsoft.NET.Test.Sdk) are restored by NuGet;
 they are not shipped with the application.

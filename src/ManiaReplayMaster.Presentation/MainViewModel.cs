@@ -2,10 +2,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
-using ManiaReplayMaster.App.Localization;
-using static ManiaReplayMaster.App.Localization.Localizer;
+using ManiaReplayMaster.Presentation.Localization;
+using static ManiaReplayMaster.Presentation.Localization.Localizer;
 
-namespace ManiaReplayMaster.App;
+namespace ManiaReplayMaster.Presentation;
 
 /// <summary>
 /// View-model for the single main window. Binds directly onto the ported <c>Config</c> fields so the

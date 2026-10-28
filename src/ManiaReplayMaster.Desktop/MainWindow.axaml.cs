@@ -5,14 +5,14 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using ManiaReplayMaster.App;
+using ManiaReplayMaster.Presentation;
 
 using Avalonia.Threading;
 using ManiaReplayMaster.Core;
 using ManiaReplayMaster.Core.Model;
 using ManiaReplayMaster.Encode;
-using ManiaReplayMaster.App.Localization;
-using static ManiaReplayMaster.App.Localization.Localizer;
+using ManiaReplayMaster.Presentation.Localization;
+using static ManiaReplayMaster.Presentation.Localization.Localizer;
 using PipelineRunner = ManiaReplayMaster.Core.Pipeline.Pipeline;
 
 namespace ManiaReplayMaster.Desktop;
@@ -30,6 +30,8 @@ public partial class MainWindow : Window
     internal MainViewModel ViewModel => _vm;
     private IReadOnlyList<CandidateItem>? _lastDetectedCandidates;
     private bool _updatingCandidates;
+    private (PixelRect WorkArea, double Scaling)? _screenBounds;
+    private bool _screenUpdatePending;
 
     public MainWindow() : this(new MainViewModel()) { }
 
@@ -39,7 +41,17 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _vm;
         Closing += OnClosing;
-        Opened += (_, _) => _encoderDetection = DetectEncodersAsync();
+        ApplyScreenBounds(initial: true, center: false);
+        Opened += (_, _) =>
+        {
+            ApplyScreenBounds(initial: true, center: true);
+            _encoderDetection = DetectEncodersAsync();
+        };
+        PositionChanged += (_, _) => QueueScreenUpdate();
+        ScalingChanged += (_, _) => QueueScreenUpdate();
+        Screens.Changed += OnScreensChanged;
+        Closed += (_, _) => Screens.Changed -= OnScreensChanged;
+        LayoutUpdated += (_, _) => UpdateContentHeight();
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         LanguageBox.SelectedIndex = _vm.L.Preference == "zh-Hans" ? 1 : _vm.L.Preference == "en" ? 2 : 0;
@@ -58,6 +70,54 @@ public partial class MainWindow : Window
         };
         _detectTimer.Tick += OnDetectTick;
         _detectTimer.Start();
+    }
+
+    private void OnScreensChanged(object? sender, EventArgs e) => QueueScreenUpdate();
+
+    private void QueueScreenUpdate()
+    {
+        if (_screenUpdatePending || !IsVisible) return;
+        _screenUpdatePending = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _screenUpdatePending = false;
+            ApplyScreenBounds(initial: false, center: false);
+        });
+    }
+
+    private void ApplyScreenBounds(bool initial, bool center)
+    {
+        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+        if (screen is null || WindowState != WindowState.Normal) return;
+        var area = screen.WorkingArea;
+        var scaling = screen.Scaling;
+        if (!initial && _screenBounds == (area, scaling)) return;
+        _screenBounds = (area, scaling);
+        var sizing = WindowSizing.ForWorkArea(area.Width, area.Height, scaling);
+        // Avalonia sizes the client area; reserve the actual native title bar and border.
+        var frame = FrameSize ?? ClientSize;
+        var frameWidth = Math.Max(0, frame.Width - ClientSize.Width);
+        var frameHeight = Math.Max(0, frame.Height - ClientSize.Height);
+        MinWidth = Math.Max(1, sizing.MinWidth - frameWidth);
+        MinHeight = Math.Max(1, sizing.MinHeight - frameHeight);
+        Width = Math.Max(MinWidth, Math.Min(initial ? sizing.Width - frameWidth : Width, sizing.AvailableWidth - frameWidth));
+        Height = Math.Max(MinHeight, Math.Min(initial ? sizing.Height - frameHeight : Height, sizing.AvailableHeight - frameHeight));
+        if (!IsVisible) return;
+        var pixelWidth = (int)Math.Ceiling((Width + frameWidth) * scaling);
+        var pixelHeight = (int)Math.Ceiling((Height + frameHeight) * scaling);
+        Position = new PixelPoint(
+            center ? area.X + (area.Width - pixelWidth) / 2 : Math.Clamp(Position.X, area.X, area.Right - pixelWidth),
+            center ? area.Y + (area.Height - pixelHeight) / 2 : Math.Clamp(Position.Y, area.Y, area.Bottom - pixelHeight));
+    }
+
+    private void UpdateContentHeight()
+    {
+        // Give the star-sized log a finite viewport so its own list stays virtualized.
+        // When settings wrap, the outer viewer scrolls while actions stay visible.
+        var height = Math.Max(ContentScroll.Viewport.Height,
+            InputsPanel.DesiredSize.Height + ParametersPanel.DesiredSize.Height + 128);
+        if (double.IsNaN(ContentGrid.Height) || Math.Abs(ContentGrid.Height - height) > .5)
+            ContentGrid.Height = height;
     }
 
     private async void OnDetectTick(object? sender, EventArgs e)

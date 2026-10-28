@@ -1,4 +1,4 @@
-# desktop-smoke.ps1 - repeatable UI smoke test for the Avalonia Native AOT app (Mania Replay Viewer).
+# desktop-smoke.ps1 - repeatable UI smoke test for Avalonia (Native AOT or JIT).
 #
 # Why this exists: the app compiled for a long time without anyone clicking through it, and the very
 # first automated pass found that the Render / Judge only buttons could never become enabled (CanRender
@@ -30,6 +30,7 @@ param(
     [string] $ExpectedAccuracy = "75.89",
     [string] $ExpectedCounts = "805, 776, 585, 251, 16, 279",
     [switch] $Render,
+    [switch] $AllowManagedRuntime,
     [string] $Fps = "",
     [string] $Width = "",
     [string] $Height = "",
@@ -118,7 +119,10 @@ try {
     $codecBox = Find-ById "CodecBox"
     Check ($null -ne $codecBox) "found editable encoder selector"
     $modules = $proc.Modules | ForEach-Object ModuleName
-    Check (-not ($modules -match '^(coreclr|clrjit|wpfgfx_cor3)\.dll$')) "native process does not load CLR/WPF"
+    Check (-not ($modules -match '^wpfgfx_cor3\.dll$')) "Avalonia process does not load WPF"
+    if (-not $AllowManagedRuntime) {
+        Check (-not ($modules -match '^(coreclr|clrjit)\.dll$')) "native process does not load CLR"
+    }
 
     foreach ($pair in @(@("ReplayBox", $Replay), @("BeatmapBox", $Beatmap))) {
         $element = Find-ById $pair[0]

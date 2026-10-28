@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'restore', 'build', 'test', 'test-all', 'e2e', 'publish', 'publish-single', 'app', 'cli', 'appcheck', 'gamecheck', 'desktop', 'publish-aot', 'app-aot', 'appcheck-aot', 'appcheck-headless', 'aotcheck')]
+    [ValidateSet('help', 'restore', 'build', 'test', 'test-all', 'e2e', 'publish', 'app', 'cli', 'appcheck', 'gamecheck', 'desktop', 'publish-aot', 'app-aot', 'appcheck-aot', 'appcheck-headless', 'aotcheck')]
     [string]$Command = 'help',
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
@@ -23,17 +23,16 @@ Commands:
   test          Run tests that do not need FFmpeg
   e2e           Run FFmpeg export, cancellation and scroll cadence tests
   test-all      Run all tests (requires FFmpeg and ffprobe)
-  publish       Publish a self-contained Windows x64 app with FFmpeg to artifacts/win-x64
-  publish-single Publish a single app executable plus FFmpeg, licenses and a release ZIP
-  app           Build and launch the retained WPF reference application
-  desktop       Build and launch Avalonia (JIT development mode)
-  publish-aot   Publish the complete Native AOT ZIP using a fresh staging directory
+  publish       Publish the Avalonia Native AOT ZIP to artifacts/win-x64-aot
+  app           Build and launch Avalonia (JIT development mode)
+  desktop       Alias for app
+  publish-aot   Alias for publish
   app-aot       Publish and launch the native desktop application
   appcheck-aot  Run UI Automation smoke against the published native application
   appcheck-headless Run encoder menu regression without desktop windows or input
   aotcheck      Publish/run native CLI, rendering, cache and x86 memory checks
   cli <args>    Run the parser/judgement CLI
-  appcheck      Build and run the interactive GUI smoke check
+  appcheck      Build Avalonia and run the interactive GUI smoke check (JIT)
   gamecheck     Run game diagnostics (default: help); pass memory32 or live explicitly
 
 Options: -Configuration Debug|Release, -DotnetPath <dotnet.exe>, -PackageSource <feed>
@@ -43,7 +42,7 @@ CLI/gamecheck arguments follow --, for example: ./build.ps1 cli -- dump-map file
 }
 
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
-    throw 'This solution requires Windows (WPF, GDI+ and process memory APIs).'
+    throw 'This solution requires Windows (GDI+ and process memory APIs).'
 }
 
 if (-not $DotnetPath) {
@@ -69,7 +68,6 @@ if ($PackageSource) {
 }
 $forwarded = @($Rest | Where-Object { $_ -ne '--' })
 $solution = Join-Path $PSScriptRoot 'ManiaReplayMaster.sln'
-$appProject = Join-Path $PSScriptRoot 'src/ManiaReplayMaster.App/ManiaReplayMaster.App.csproj'
 $desktopProject = Join-Path $PSScriptRoot 'src/ManiaReplayMaster.Desktop/ManiaReplayMaster.Desktop.csproj'
 $gameProject = Join-Path $PSScriptRoot 'tools/gamecheck/harness/ManiaReplayMaster.GameCheck.csproj'
 
@@ -91,32 +89,13 @@ try {
             if ($Command -eq 'e2e') { $filter = @('--filter', 'Category=EndToEnd') }
             Invoke-Dotnet (@('test', $solution, '-c', $Configuration, '--nologo') + $restoreOptions + $filter + $forwarded)
         }
-        { $_ -in 'publish', 'publish-single' } {
-            $singleFile = $Command -eq 'publish-single'
-            $publishFolder = if ($singleFile) { 'artifacts/win-x64-single' } else { 'artifacts/win-x64' }
-            $publishOutput = Join-Path $PSScriptRoot $publishFolder
-            $publishOptions = @()
-            if ($singleFile) {
-                $publishOptions = @('-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true',
-                    '-p:EnableCompressionInSingleFile=true', '-p:DebugType=None', '-p:DebugSymbols=false')
-            }
-            Invoke-Dotnet (@('publish', $appProject, '-c', $Configuration, '-r', 'win-x64',
-                '--self-contained', 'true', '-p:PublishTrimmed=false',
-                '-o', $publishOutput) + $publishOptions + $restoreOptions + $forwarded)
-            & (Join-Path $PSScriptRoot 'tools/package-ffmpeg.ps1') -Destination $publishOutput
-            if ($singleFile) {
-                $archivePath = Join-Path $PSScriptRoot 'artifacts/ManiaReplayViewer-win-x64-single.zip'
-                Compress-Archive -Path (Join-Path $publishOutput '*') -DestinationPath $archivePath -Force
-                Write-Host "Release archive: $archivePath"
-            }
-        }
-        { $_ -in 'publish-aot', 'app-aot' } {
+        { $_ -in 'publish', 'publish-aot', 'app-aot' } {
             & (Join-Path $PSScriptRoot 'tools/package-aot.ps1') -DotnetPath $DotnetPath -Configuration $Configuration -RestoreOptions $restoreOptions
             if ($Command -eq 'app-aot') {
                 Start-Process -FilePath (Join-Path $PSScriptRoot 'artifacts/win-x64-aot/ManiaReplayViewer.exe') -WorkingDirectory $PSScriptRoot
             }
         }
-        'desktop' { Invoke-Dotnet (@('run', '--project', $desktopProject, '-c', $Configuration) + $restoreOptions + @('--') + $forwarded) }
+        { $_ -in 'app', 'desktop' } { Invoke-Dotnet (@('run', '--project', $desktopProject, '-c', $Configuration) + $restoreOptions + @('--') + $forwarded) }
         'appcheck-headless' {
             Invoke-Dotnet (@('run', '--project', (Join-Path $PSScriptRoot 'tools/appcheck/headless'), '-c', $Configuration) + $restoreOptions + $forwarded)
         }
@@ -139,7 +118,6 @@ try {
             & (Join-Path $toolsOutput 'game/gamecheck.exe') memory32 --helper (Join-Path $helperOutput 'x86target.exe')
             if ($LASTEXITCODE -ne 0) { throw 'Native memory32 verification failed.' }
         }
-        'app' { Invoke-Dotnet (@('run', '--project', $appProject, '-c', $Configuration) + $restoreOptions + @('--') + $forwarded) }
         'cli' {
             Invoke-Dotnet (@('run', '--project', (Join-Path $PSScriptRoot 'src/ManiaReplayMaster.Cli'),
                 '-c', $Configuration) + $restoreOptions + @('--') + $forwarded)
@@ -155,9 +133,9 @@ try {
             Invoke-Dotnet (@('run', '--project', $gameProject, '-c', $Configuration) + $restoreOptions + @('--') + $forwarded)
         }
         'appcheck' {
-            Invoke-Dotnet (@('build', $appProject, '-c', $Configuration) + $restoreOptions)
-            $appExe = Join-Path $PSScriptRoot "src/ManiaReplayMaster.App/bin/$Configuration/net10.0-windows/ManiaReplayMaster.exe"
-            & (Join-Path $PSScriptRoot 'tools/appcheck/app-smoke.ps1') -Exe $appExe @forwarded
+            Invoke-Dotnet (@('build', $desktopProject, '-c', $Configuration) + $restoreOptions)
+            $appExe = Join-Path $PSScriptRoot "src/ManiaReplayMaster.Desktop/bin/$Configuration/net10.0-windows/ManiaReplayViewer.exe"
+            & (Join-Path $PSScriptRoot 'tools/appcheck/desktop-smoke.ps1') -Exe $appExe -AllowManagedRuntime @forwarded
             if ($LASTEXITCODE -ne 0) { throw "GUI check failed (exit code $LASTEXITCODE)." }
         }
     }

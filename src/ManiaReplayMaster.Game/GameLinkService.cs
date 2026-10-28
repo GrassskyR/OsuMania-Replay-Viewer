@@ -34,7 +34,7 @@ public sealed class AutoFillResult
 }
 
 /// <summary>
-/// Facade over the whole game-link subsystem (plan §5.1), so the WPF layer never has to wire the
+/// Facade over the whole game-link subsystem (plan §5.1), so the UI layer never has to wire the
 /// pieces together itself:
 /// <c>GameLocator</c> → <see cref="ScoreDatabaseProvider"/> → <see cref="ReplayResolver"/> plus
 /// <see cref="BeatmapLocator"/>.
