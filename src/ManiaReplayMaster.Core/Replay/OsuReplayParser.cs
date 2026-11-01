@@ -121,7 +121,7 @@ public static class OsuReplayParser
     /// The payload is an LZMA <c>FORMAT_ALONE</c> stream: 5 properties bytes (lc/lp/pb packed),
     /// then an 8-byte little-endian uncompressed size, then the range-coded data. This is exactly
     /// what <c>org.tukaani.xz.LZMAInputStream</c> consumed in the reference implementation, and
-    /// what <see cref="SharpCompress.Compressors.LZMA.LzmaStream"/>'s legacy constructor expects.
+    /// what <see cref="SharpCompress.Compressors.LZMA.LzmaStream.Create(byte[], Stream, long, long, bool)"/> expects.
     /// </summary>
     public static byte[] Decompress(OsuReplay replay)
     {
@@ -141,7 +141,7 @@ public static class OsuReplayParser
         Array.Copy(data, 0, properties, 0, 5);
 
         using var payload = new MemoryStream(data, 13, data.Length - 13, writable: false);
-        using var stream = new SharpCompress.Compressors.LZMA.LzmaStream(
+        using var stream = SharpCompress.Compressors.LZMA.LzmaStream.Create(
             properties, payload, payload.Length, uncompressedSize);
 
         using var output = new MemoryStream(uncompressedSize > 0 && uncompressedSize < int.MaxValue

@@ -27,7 +27,7 @@ def managed_pe(path):
 def audit(folder, archive, native=True):
     files = sorted(p for p in folder.rglob("*") if p.is_file())
     if native:
-        for required in ("ManiaReplayViewer.exe", "ffmpeg.exe", "licenses/Avalonia.txt"):
+        for required in ("ManiaReplayViewer.exe", "ffmpeg.exe", "licenses/Avalonia.txt", "build-info.json"):
             require((folder / required).is_file(), f"Missing package file: {required}")
         for path in files:
             require(path.suffix.lower() not in {".mp4", ".pdb"}, f"Unexpected package file: {path}")
@@ -35,14 +35,21 @@ def audit(folder, archive, native=True):
             require(path.name.lower() not in {"ffprobe.exe", "ffplay.exe", "coreclr.dll", "clrjit.dll"}, f"Unexpected runtime: {path}")
             if path.suffix.lower() in {".exe", ".dll"}:
                 require(not managed_pe(path), f"Managed PE in native package: {path}")
+        build = json.loads((folder / "build-info.json").read_text(encoding="utf-8-sig"))
+        require(build.get("version") and build.get("source_revision"), "Missing build version/revision")
+        require(build.get("ffmpeg_sha256") == hashlib.sha256((folder / "ffmpeg.exe").read_bytes()).hexdigest(), "Build metadata FFmpeg checksum mismatch")
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as output:
         for path in files:
             output.write(path, path.relative_to(folder).as_posix())
+    with zipfile.ZipFile(archive) as output:
+        require(output.testzip() is None, "ZIP CRC validation failed")
     return {
+        "build": json.loads((folder / "build-info.json").read_text(encoding="utf-8-sig")) if native else None,
         "compression": "ZIP DEFLATE level 6",
         "exe_bytes": (folder / ("ManiaReplayViewer.exe" if native else "ManiaReplayMaster.exe")).stat().st_size,
         "total_bytes": sum(p.stat().st_size for p in files),
         "zip_bytes": archive.stat().st_size,
+        "zip_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
         "files": [{"path": p.relative_to(folder).as_posix(), "bytes": p.stat().st_size,
                    "sha256": hashlib.sha256(p.read_bytes()).hexdigest()} for p in files],
     }

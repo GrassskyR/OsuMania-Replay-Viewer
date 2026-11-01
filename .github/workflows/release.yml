@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release; new tags use the selected branch commit (for example, v0.1.0)'
+        description: 'Version tag, for example v3.1.0 or v3.1.0-rc.1; new tags use the selected branch commit'
         required: true
         type: string
 
@@ -18,127 +18,74 @@ concurrency:
   group: windows-release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
 jobs:
-  release:
-    runs-on: windows-latest
-    timeout-minutes: 60
-    permissions:
-      contents: write
-    defaults:
-      run:
-        shell: pwsh
-    env:
-      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+  revision:
+    name: Resolve version and source commit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.revision.outputs.sha }}
+      version: ${{ steps.revision.outputs.version }}
+      prerelease: ${{ steps.revision.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Resolve release revision
         id: revision
-        run: |
-          $tagRef = "refs/tags/$env:RELEASE_TAG"
-          git check-ref-format $tagRef
-          if ($LASTEXITCODE -ne 0) { throw "Invalid release tag: $env:RELEASE_TAG" }
+        shell: pwsh
+        run: ./tools/ci/resolve-release.ps1
 
-          git show-ref --verify --quiet $tagRef
-          if ($LASTEXITCODE -eq 0) {
-            git checkout --detach $tagRef
-            if ($LASTEXITCODE -ne 0) { throw "Could not check out release tag: $env:RELEASE_TAG" }
-          } elseif ($LASTEXITCODE -eq 1 -and $env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-            Write-Host "New tag $env:RELEASE_TAG will be created after a successful build."
-          } else {
-            throw "Could not resolve release tag: $env:RELEASE_TAG"
-          }
+  validate:
+    name: Validate release package
+    needs: revision
+    uses: ./.github/workflows/validate.yml
+    with:
+      ref: ${{ needs.revision.outputs.sha }}
+      version: ${{ needs.revision.outputs.version }}
 
-          $commit = git rev-parse HEAD
-          if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the release commit.' }
-          "sha=$commit" >> $env:GITHUB_OUTPUT
-      - uses: actions/setup-dotnet@v5
+  publish:
+    name: Publish validated package
+    needs: [revision, validate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      EXPECTED_REVISION: ${{ needs.revision.outputs.sha }}
+      EXPECTED_VERSION: ${{ needs.revision.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
         with:
-          global-json-file: global.json
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-      - uses: msys2/setup-msys2@v2
-        id: msys2
-        with:
-          msystem: MINGW64
-          update: false
-          install: make diffutils tar mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib mingw-w64-x86_64-pkgconf
-      - name: Cache minimal FFmpeg build
-        uses: actions/cache@v5
-        with:
-          path: out/dependencies/ffmpeg-minimal/
-          key: ffmpeg-minimal-win-x64-v1-${{ hashFiles('tools/ffmpeg/**') }}
-      - name: Build minimal FFmpeg
-        run: ./tools/ffmpeg/build-minimal.ps1 -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
-      - name: Build
-        run: ./build.ps1 build
-      - name: Unit and reference tests
-        run: ./build.ps1 test -- --no-build --no-restore
-      - name: Install FFmpeg validation tools
-        run: choco install ffmpeg --yes --no-progress
-      - name: Headless encoder menu regression
-        run: |
-          $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
-          $env:MRM_FFMPEG = "$PWD/out/dependencies/ffmpeg-minimal/package/ffmpeg.exe"
-          $env:MRM_FIXTURE_FFMPEG = "C:/ProgramData/chocolatey/bin/ffmpeg.exe"
-          ./build.ps1 appcheck-headless
-      - name: Synthetic x86 memory checks
-        run: ./build.ps1 gamecheck -- memory32
-      - name: Publish Avalonia Native AOT application
-        run: ./build.ps1 publish
-      - name: Export and frame cadence tests
-        run: |
-          $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
-          $env:MRM_FFMPEG = "$PWD/artifacts/win-x64-aot/ffmpeg.exe"
-          $env:MRM_FIXTURE_FFMPEG = "C:/ProgramData/chocolatey/bin/ffmpeg.exe"
-          $env:MRM_FFPROBE = "C:/ProgramData/chocolatey/bin/ffprobe.exe"
-          ./build.ps1 e2e -- --no-build --no-restore
-      - name: Run published native validation tools
-        run: |
-          $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
-          $env:MRM_FFMPEG = "$PWD/artifacts/win-x64-aot/ffmpeg.exe"
-          $env:MRM_FIXTURE_FFMPEG = "C:/ProgramData/chocolatey/bin/ffmpeg.exe"
-          $env:MRM_FFPROBE = "C:/ProgramData/chocolatey/bin/ffprobe.exe"
-          ./build.ps1 aotcheck
-      - name: Native desktop UI Automation smoke
-        run: ./build.ps1 appcheck-aot
-      - name: Upload validation diagnostics
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: windows-release-validation-diagnostics
-          path: |
-            out/aot-check/logs/
-            out/appcheck/
-          if-no-files-found: ignore
-      - uses: actions/upload-artifact@v6
+          ref: ${{ needs.revision.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v5
         with:
           name: ManiaReplayViewer-win-x64-aot
-          path: |
-            artifacts/ManiaReplayViewer-win-x64-aot.zip
-            artifacts/ManiaReplayViewer-win-x64-aot.measurements.json
-          if-no-files-found: error
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: ManiaReplayViewer-windows-release
-          path: |
-            artifacts/ManiaReplayViewer-win-x64-aot.zip
-            artifacts/ManiaReplayViewer-win-x64-aot.measurements.json
-          if-no-files-found: error
+          path: artifacts/
+      - name: Verify source, version and archive before publication
+        shell: pwsh
+        run: |
+          ./tools/ci/resolve-release.ps1 -ExpectedRevision $env:EXPECTED_REVISION
+          $report = Get-Content artifacts/ManiaReplayViewer-win-x64-aot.measurements.json -Raw | ConvertFrom-Json
+          if ($report.aot.build.source_revision -ne $env:EXPECTED_REVISION -or $report.aot.build.version -ne $env:EXPECTED_VERSION -or $report.aot.build.source_dirty) {
+            throw 'Downloaded package does not match the validated release revision/version.'
+          }
+          $hash = (Get-FileHash artifacts/ManiaReplayViewer-win-x64-aot.zip -Algorithm SHA256).Hash
+          if ($hash -ne $report.aot.zip_sha256) { throw 'Downloaded ZIP checksum mismatch.' }
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          target_commitish: ${{ steps.revision.outputs.sha }}
+          target_commitish: ${{ needs.revision.outputs.sha }}
           name: ${{ env.RELEASE_TAG }}
           generate_release_notes: true
-          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          prerelease: ${{ needs.revision.outputs.prerelease == 'true' }}
           fail_on_unmatched_files: true
           files: |
             artifacts/ManiaReplayViewer-win-x64-aot.zip

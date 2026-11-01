@@ -5,6 +5,7 @@ out/
 artifacts/
 TestResults/
 packages/
+__pycache__/
 
 # Rendered media and temporary logs
 *.mp4

@@ -26,7 +26,7 @@ by the project-wide GPL-3.0 terms.
 
 | Component | Version | License |
 |---|---|---|
-| [SharpCompress](https://github.com/adamhathcock/sharpcompress) | 0.37.2 | [MIT, Adam Hathcock](licenses/SharpCompress.txt) |
+| [SharpCompress](https://github.com/adamhathcock/sharpcompress) | 0.48.1 | [MIT, Adam Hathcock](licenses/SharpCompress.txt) |
 | [ZstdSharp.Port](https://github.com/oleg-st/ZstdSharp) | 0.8.0 (transitive) | [MIT, Oleg Stepanischev](licenses/ZstdSharp.txt); underlying [Zstandard BSD license](licenses/Zstandard.txt) |
 | [Avalonia](https://github.com/AvaloniaUI/Avalonia) | 12.1.4 | [MIT](licenses/Avalonia.txt) |
 | [SkiaSharp](https://github.com/mono/SkiaSharp) / Windows native assets | 3.119.4 | MIT and native third-party notices in `licenses/packages/` |

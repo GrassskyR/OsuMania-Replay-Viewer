@@ -1,0 +1,201 @@
+name: Windows validation
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact commit to validate; defaults to the triggering commit/PR merge
+        type: string
+        default: ''
+      version:
+        description: Application version for release builds
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  BUILD_VERSION: ${{ inputs.version }}
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  lint:
+    name: Workflow lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - name: Check GitHub Actions workflows
+        shell: bash
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+
+  fast:
+    name: Compile, unit tests and headless UI
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages*.lock.json'
+      - name: Check development environment
+        id: environment
+        run: ./build.ps1 doctor
+      - name: Check build scripts and release resolution
+        id: scripts
+        run: ./tools/ci/test-infrastructure.ps1
+      - name: Restore locked dependencies
+        id: restore
+        run: ./build.ps1 restore -Version $env:BUILD_VERSION -- --locked-mode
+      - name: Build
+        id: build
+        run: ./build.ps1 build -Version $env:BUILD_VERSION -- --no-restore
+      - name: Unit and reference tests
+        id: tests
+        run: ./build.ps1 test -- --no-build --no-restore
+      - name: Headless layout and menu checks
+        id: headless
+        run: ./build.ps1 appcheck-headless -Version $env:BUILD_VERSION -- --no-restore
+      - name: Write validation summary
+        if: always()
+        env:
+          VALIDATION_STATUS: ${{ job.status }}
+          VALIDATION_STEPS: ${{ toJSON(steps) }}
+        run: ./tools/ci/write-summary.ps1 -Phase Fast -Status $env:VALIDATION_STATUS
+      - name: Upload fast validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-fast-diagnostics
+          path: out/diagnostics/
+          if-no-files-found: warn
+          retention-days: 14
+
+  native:
+    name: FFmpeg, video export and Native AOT
+    needs: [lint, fast]
+    runs-on: windows-2025
+    timeout-minutes: 60
+    env:
+      MRM_FFMPEG: ${{ github.workspace }}/out/dependencies/ffmpeg-minimal/package/ffmpeg.exe
+      MRM_FIXTURE_FFMPEG: C:/ProgramData/chocolatey/bin/ffmpeg.exe
+      MRM_FFPROBE: C:/ProgramData/chocolatey/bin/ffprobe.exe
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages*.lock.json'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: MINGW64
+          update: false
+          install: make diffutils tar mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib mingw-w64-x86_64-pkgconf
+      - name: Check native environment
+        id: environment
+        run: ./build.ps1 doctor -Profile Publish -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
+      - name: Check package integrity guards
+        id: package_guards
+        run: python -O tools/ci/test-package-audit.py
+      - name: Identify FFmpeg build inputs and toolchain
+        id: ffmpeg
+        run: |
+          $fingerprint = ./tools/ffmpeg/get-build-fingerprint.ps1 -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
+          "fingerprint=$fingerprint" >> $env:GITHUB_OUTPUT
+      - name: Cache verified FFmpeg source downloads
+        uses: actions/cache@v5
+        with:
+          path: out/dependencies/ffmpeg-minimal/downloads/
+          key: ffmpeg-sources-v2-${{ hashFiles('tools/ffmpeg/sources.json') }}
+      - name: Cache minimal FFmpeg package
+        uses: actions/cache@v5
+        with:
+          path: out/dependencies/ffmpeg-minimal/package/
+          key: ffmpeg-win-x64-v2-${{ steps.ffmpeg.outputs.fingerprint }}
+      - name: Build minimal FFmpeg
+        id: ffmpeg_build
+        run: ./tools/ffmpeg/build-minimal.ps1 -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
+      - name: Restore locked dependencies
+        id: restore
+        run: ./build.ps1 restore -Native -Version $env:BUILD_VERSION -- --locked-mode
+      - name: Build integration test assemblies
+        id: build
+        run: ./build.ps1 build -Version $env:BUILD_VERSION -- --no-restore
+      - name: Install FFmpeg validation tools
+        id: validation_tools
+        run: choco install ffmpeg --yes --no-progress
+      - name: Headless FFmpeg selection regression
+        id: headless
+        run: ./build.ps1 appcheck-headless -Version $env:BUILD_VERSION -- --no-restore
+      - name: Synthetic x86 memory checks
+        id: memory
+        run: ./build.ps1 gamecheck -Version $env:BUILD_VERSION -- memory32
+      - name: Publish Native AOT application
+        id: package
+        run: ./build.ps1 publish -Version $env:BUILD_VERSION -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
+      - name: Select the packaged FFmpeg for acceptance tests
+        run: '"MRM_FFMPEG=$PWD/artifacts/win-x64-aot/ffmpeg.exe" >> $env:GITHUB_ENV'
+      - name: Export and frame cadence tests
+        id: e2e
+        run: ./build.ps1 e2e -- --no-build --no-restore
+      - name: Native CLI, rendering, cache and memory checks
+        id: aot
+        run: ./build.ps1 aotcheck -Version $env:BUILD_VERSION
+      - name: Native desktop UI Automation smoke
+        id: desktop
+        run: ./build.ps1 appcheck-aot
+      - name: Write validation summary
+        if: always()
+        env:
+          VALIDATION_STATUS: ${{ job.status }}
+          VALIDATION_STEPS: ${{ toJSON(steps) }}
+        run: ./tools/ci/write-summary.ps1 -Phase Native -Status $env:VALIDATION_STATUS
+      - name: Upload native validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-native-diagnostics
+          path: |
+            out/diagnostics/
+            out/appcheck/
+            out/gamecheck-*.log
+            out/dependencies/ffmpeg-minimal/config.log
+            tools/gamecheck/harness/out/*.log
+            artifacts/aot-tools/game/out/*.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload validated package
+        uses: actions/upload-artifact@v6
+        with:
+          name: ManiaReplayViewer-win-x64-aot
+          path: |
+            artifacts/ManiaReplayViewer-win-x64-aot.zip
+            artifacts/ManiaReplayViewer-win-x64-aot.measurements.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

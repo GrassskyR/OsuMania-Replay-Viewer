@@ -1,6 +1,7 @@
 # Publish into a new staging directory; retain any previous output as a recoverable backup.
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$DotnetPath, [string]$Configuration = 'Release', [string[]]$RestoreOptions = @())
+param([Parameter(Mandatory)][string]$DotnetPath, [string]$Configuration = 'Release', [string[]]$RestoreOptions = @(),
+    [string]$MsysRoot = 'C:/msys64', [string]$DiagnosticsDirectory = '')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = Split-Path -Parent $PSScriptRoot
@@ -19,10 +20,30 @@ foreach ($path in @($stagingRoot, $staging, $destination, $archive, $backup)) {
     }
 }
 New-Item -ItemType Directory -Path $staging -Force | Out-Null
+$publishOptions = @($RestoreOptions)
+if ($DiagnosticsDirectory) { $publishOptions += "-bl:$(Join-Path $DiagnosticsDirectory 'publish-desktop.binlog')" }
 & $DotnetPath publish (Join-Path $repo 'src/ManiaReplayMaster.Desktop') -c $Configuration -r win-x64 `
-    -p:PublishAot=true -p:OptimizationPreference=Size -p:DebugType=None -p:DebugSymbols=false -o $staging @RestoreOptions
+    -p:PublishAot=true -p:OptimizationPreference=Size -p:DebugType=None -p:DebugSymbols=false `
+    -p:ILLinkTreatWarningsAsErrors=true -p:IlcTreatWarningsAsErrors=true -o $staging @publishOptions 2>&1 | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "AOT publish failed. Staging retained at $staging" }
-& (Join-Path $PSScriptRoot 'package-ffmpeg.ps1') -Destination $staging
+& (Join-Path $PSScriptRoot 'package-ffmpeg.ps1') -Destination $staging -MsysRoot $MsysRoot
+
+$revision = & git -C $repo rev-parse HEAD
+if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the package source commit.' }
+$sourceChanges = @(& git -C $repo status --porcelain --untracked-files=normal)
+if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect the package source state.' }
+$productVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $staging 'ManiaReplayViewer.exe')).ProductVersion
+$sdkVersion = & $DotnetPath --version
+if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the build SDK.' }
+[ordered]@{
+    version = $productVersion.Split('+')[0]
+    informational_version = $productVersion
+    source_revision = $revision.Trim()
+    source_dirty = $sourceChanges.Count -gt 0
+    sdk_version = $sdkVersion.Trim()
+    runtime = 'win-x64'
+    ffmpeg_sha256 = (Get-FileHash -LiteralPath (Join-Path $staging 'ffmpeg.exe') -Algorithm SHA256).Hash.ToLowerInvariant()
+} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $staging 'build-info.json') -Encoding utf8
 
 # Copy the licenses from the exact restored package graph, including native Skia/HarfBuzz/ANGLE
 # notices and the Native AOT runtime. No WindowsDesktop runtime is part of this graph.
@@ -44,7 +65,7 @@ foreach ($library in $assets.libraries.PSObject.Properties) {
     foreach ($notice in $notices) { Copy-Item -LiteralPath $notice.FullName -Destination $target }
 }
 $manifest | Sort-Object | Set-Content -LiteralPath (Join-Path $staging 'licenses/PACKAGES.txt') -Encoding utf8
-& python (Join-Path $PSScriptRoot 'package-audit.py') $staging (Join-Path $stagingRoot $archiveName)
+& python (Join-Path $PSScriptRoot 'package-audit.py') $staging (Join-Path $stagingRoot $archiveName) 2>&1 | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "Package validation failed. Staging retained at $staging" }
 
 # Promote the directory, archive and measurements together, after every validation succeeds.

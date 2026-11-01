@@ -1,13 +1,12 @@
 # Bundle the project's minimal static FFmpeg; the full development tool is never packaged.
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$Destination)
+param([Parameter(Mandatory)][string]$Destination, [string]$MsysRoot = 'C:/msys64')
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $package = Join-Path $repo 'out/dependencies/ffmpeg-minimal/package'
 $ffmpeg = Join-Path $package 'ffmpeg.exe'
-if (-not (Test-Path -LiteralPath $ffmpeg)) {
-    & (Join-Path $PSScriptRoot 'ffmpeg/build-minimal.ps1')
-}
+# Validate the fingerprint even when a previous ffmpeg.exe already exists.
+& (Join-Path $PSScriptRoot 'ffmpeg/build-minimal.ps1') -MsysRoot $MsysRoot
 $expected = (Get-Content -LiteralPath (Join-Path $package 'ffmpeg.sha256') -Raw).Trim()
 if ((Get-FileHash -LiteralPath $ffmpeg -Algorithm SHA256).Hash -ne $expected) { throw 'Minimal FFmpeg checksum mismatch. Rebuild tools/ffmpeg/build-minimal.ps1.' }
 $encoders = & $ffmpeg -hide_banner -encoders 2>&1 | Out-String

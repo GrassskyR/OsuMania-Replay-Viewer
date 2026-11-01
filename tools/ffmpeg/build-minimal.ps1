@@ -3,14 +3,17 @@ param([string]$MsysRoot = 'C:/msys64')
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $root = Join-Path $repo 'out/dependencies/ffmpeg-minimal'
-$fingerprintFiles = @((Join-Path $PSScriptRoot 'sources.json'), (Join-Path $PSScriptRoot 'build-minimal.sh'), $PSCommandPath,
-    (Join-Path $MsysRoot 'mingw64/bin/gcc.exe'), (Join-Path $MsysRoot 'mingw64/lib/libz.a'))
-$fingerprint = ($fingerprintFiles | ForEach-Object { (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash }) -join "`n"
+$diagnostics = Join-Path $repo 'out/diagnostics'
+New-Item -ItemType Directory -Path $diagnostics -Force | Out-Null
+Start-Transcript -LiteralPath (Join-Path $diagnostics 'ffmpeg.log') -Append | Out-Null
+try {
+$fingerprint = & (Join-Path $PSScriptRoot 'get-build-fingerprint.ps1') -MsysRoot $MsysRoot
 $stamp = Join-Path $root 'package/build-inputs.txt'
 if ((Test-Path -LiteralPath $stamp) -and (Get-Content -LiteralPath $stamp -Raw).Trim() -eq $fingerprint.Trim()) {
     $cached = Join-Path $root 'package/ffmpeg.exe'
-    $cachedHash = (Get-Content -LiteralPath (Join-Path $root 'package/ffmpeg.sha256') -Raw).Trim()
-    if ((Get-FileHash -LiteralPath $cached -Algorithm SHA256).Hash -eq $cachedHash) {
+    $hashFile = Join-Path $root 'package/ffmpeg.sha256'
+    if ((Test-Path -LiteralPath $cached) -and (Test-Path -LiteralPath $hashFile) -and
+        (Get-FileHash -LiteralPath $cached -Algorithm SHA256).Hash -eq (Get-Content -LiteralPath $hashFile -Raw).Trim()) {
         Write-Host "Minimal FFmpeg already built: $cached"
         return
     }
@@ -30,11 +33,22 @@ foreach ($item in $sources.PSObject.Properties.Value) {
 }
 Expand-Archive -LiteralPath (Join-Path $downloads $sources.nasm.file) -DestinationPath (Join-Path $root 'nasm') -Force
 $bash = Join-Path $MsysRoot 'usr/bin/bash.exe'
-if (-not (Test-Path -LiteralPath $bash)) { throw 'Install MSYS2 with mingw-w64-x86_64-gcc, mingw-w64-x86_64-zlib, pkgconf and make.' }
+$oldMsystem = $env:MSYSTEM
+$oldChere = $env:CHERE_INVOKING
+$oldWorkRoot = $env:MRM_FFMPEG_WORK_ROOT
+$env:MSYSTEM = 'MINGW64'
 $env:CHERE_INVOKING = '1'
+# Never mix static libraries or extracted sources from different build inputs/toolchains.
+$env:MRM_FFMPEG_WORK_ROOT = Join-Path $root "work/$fingerprint"
 $script = (Join-Path $PSScriptRoot 'build-minimal.sh').Replace('\', '/')
-& $bash -lc ('bash "' + $script + '"')
-if ($LASTEXITCODE -ne 0) { throw 'Minimal FFmpeg build failed.' }
+try {
+    & $bash -lc ('bash "' + $script + '"') 2>&1 | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'Minimal FFmpeg build failed. See out/diagnostics/ffmpeg.log and out/dependencies/ffmpeg-minimal/config.log.' }
+} finally {
+    $env:MSYSTEM = $oldMsystem
+    $env:CHERE_INVOKING = $oldChere
+    $env:MRM_FFMPEG_WORK_ROOT = $oldWorkRoot
+}
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'sources.json'), (Join-Path $PSScriptRoot 'build-minimal.sh') -Destination (Join-Path $root 'package/licenses/ffmpeg')
 @'
 This FFmpeg is built from the pinned sources in sources.json. The complete build
@@ -50,3 +64,4 @@ $hash = (Get-FileHash -LiteralPath $ffmpeg -Algorithm SHA256).Hash.ToLowerInvari
 $hash | Set-Content -LiteralPath (Join-Path $root 'package/ffmpeg.sha256') -Encoding ascii
 $fingerprint | Set-Content -LiteralPath $stamp -Encoding ascii
 Write-Host "Minimal FFmpeg: $ffmpeg ($((Get-Item -LiteralPath $ffmpeg).Length) bytes)"
+} finally { Stop-Transcript | Out-Null }

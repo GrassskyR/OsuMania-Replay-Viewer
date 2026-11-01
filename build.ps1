@@ -1,13 +1,20 @@
+#Requires -Version 7.0
 # Requires Windows and a .NET 10 x64 SDK. See README.md for examples.
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'restore', 'build', 'test', 'test-all', 'e2e', 'publish', 'app', 'cli', 'appcheck', 'gamecheck', 'desktop', 'publish-aot', 'app-aot', 'appcheck-aot', 'appcheck-headless', 'aotcheck')]
+    [ValidateSet('help', 'doctor', 'restore', 'build', 'test', 'test-all', 'e2e', 'publish', 'app', 'cli', 'appcheck', 'gamecheck', 'desktop', 'publish-aot', 'app-aot', 'appcheck-aot', 'appcheck-headless', 'aotcheck')]
     [string]$Command = 'help',
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
     [string]$DotnetPath = '',
     [string]$PackageSource = '',
+    [ValidateSet('Development', 'Publish')]
+    [string]$Profile = 'Development',
+    [string]$MsysRoot = 'C:/msys64',
+    [string]$Version = '',
+    [string]$DiagnosticsDirectory = 'out/diagnostics',
+    [switch]$Native,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Rest
 )
@@ -18,7 +25,8 @@ Set-StrictMode -Version Latest
 if ($Command -eq 'help') {
     Write-Host @'
 Commands:
-  restore       Restore solution dependencies
+  doctor        Check development prerequisites; -Profile Publish checks native tools too
+  restore       Restore solution and validation tools; -Native also restores AOT graphs
   build         Build the solution (Release by default)
   test          Run tests that do not need FFmpeg
   e2e           Run FFmpeg export, cancellation and scroll cadence tests
@@ -36,6 +44,8 @@ Commands:
   gamecheck     Run game diagnostics (default: help); pass memory32 or live explicitly
 
 Options: -Configuration Debug|Release, -DotnetPath <dotnet.exe>, -PackageSource <feed>
+         -Version <MAJOR.MINOR.PATCH[-prerelease]>, -MsysRoot <directory>
+         -DiagnosticsDirectory <directory> (default: out/diagnostics)
 CLI/gamecheck arguments follow --, for example: ./build.ps1 cli -- dump-map file.osu
 '@
     exit 0
@@ -45,52 +55,70 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
     throw 'This solution requires Windows (GDI+ and process memory APIs).'
 }
 
-if (-not $DotnetPath) {
-    if ($env:DOTNET_ROOT -and (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'dotnet.exe'))) {
-        $DotnetPath = Join-Path $env:DOTNET_ROOT 'dotnet.exe'
-    } elseif (Test-Path -LiteralPath (Join-Path $env:ProgramFiles 'dotnet/dotnet.exe')) {
-        $DotnetPath = Join-Path $env:ProgramFiles 'dotnet/dotnet.exe'
-    } else {
-        $DotnetPath = (Get-Command dotnet -ErrorAction Stop).Source
-    }
-}
-$DotnetPath = (Resolve-Path -LiteralPath $DotnetPath).Path
+. (Join-Path $PSScriptRoot 'tools/build-environment.ps1')
+. (Join-Path $PSScriptRoot 'tools/build-version.ps1')
+if ($Version) { Assert-BuildVersion $Version }
+if (-not [IO.Path]::IsPathRooted($DiagnosticsDirectory)) { $DiagnosticsDirectory = Join-Path $PSScriptRoot $DiagnosticsDirectory }
+New-Item -ItemType Directory -Path $DiagnosticsDirectory -Force | Out-Null
+Start-Transcript -LiteralPath (Join-Path $DiagnosticsDirectory "$Command.log") -Append | Out-Null
+try {
+$DotnetPath = Resolve-BuildDotnet -ExplicitPath $DotnetPath -Repo $PSScriptRoot
 $env:DOTNET_ROOT = Split-Path -Parent $DotnetPath
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
 
 $restoreOptions = @()
+if ($Version) { $restoreOptions += "-p:Version=$Version" }
 if ($PackageSource) {
     if (Test-Path -LiteralPath $PackageSource) {
         $PackageSource = (Resolve-Path -LiteralPath $PackageSource).Path
     }
     $restoreOptions += "-p:RestoreSources=$PackageSource"
 }
-$forwarded = @($Rest | Where-Object { $_ -ne '--' })
+$forwarded = @($Rest | Where-Object { $null -ne $_ -and $_ -ne '--' })
 $solution = Join-Path $PSScriptRoot 'ManiaReplayMaster.sln'
 $desktopProject = Join-Path $PSScriptRoot 'src/ManiaReplayMaster.Desktop/ManiaReplayMaster.Desktop.csproj'
 $gameProject = Join-Path $PSScriptRoot 'tools/gamecheck/harness/ManiaReplayMaster.GameCheck.csproj'
 
 function Invoke-Dotnet {
     param([string[]]$Arguments)
-    & $DotnetPath @Arguments
+    if ($Arguments[0] -in 'restore', 'build', 'test', 'publish') {
+        $script:invocation++
+        $Arguments += "-bl:$(Join-Path $DiagnosticsDirectory "$Command-$script:invocation.binlog")"
+    }
+    & $DotnetPath @Arguments 2>&1 | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "dotnet failed (exit code $LASTEXITCODE)." }
 }
 
 Push-Location $PSScriptRoot
 try {
-    Invoke-Dotnet @('--version')
+    $script:invocation = 0
     switch ($Command) {
-        'restore' { Invoke-Dotnet (@('restore', $solution) + $restoreOptions + $forwarded) }
+        'doctor' { Test-BuildEnvironment -Profile $Profile -MsysRoot $MsysRoot }
+        'restore' {
+            foreach ($project in @($solution, (Join-Path $PSScriptRoot 'tools/appcheck/headless'), $gameProject,
+                (Join-Path $PSScriptRoot 'tools/gamecheck/x86target'))) {
+                Invoke-Dotnet (@('restore', $project) + $restoreOptions + $forwarded)
+            }
+            if ($Native) {
+                foreach ($project in @($desktopProject, (Join-Path $PSScriptRoot 'src/ManiaReplayMaster.Cli'),
+                    (Join-Path $PSScriptRoot 'tools/aotcheck'), $gameProject)) {
+                    Invoke-Dotnet (@('restore', $project, '-r', 'win-x64', '-p:PublishAot=true') + $restoreOptions + $forwarded)
+                }
+            }
+        }
         'build' { Invoke-Dotnet (@('build', $solution, '-c', $Configuration) + $restoreOptions + $forwarded) }
         { $_ -in 'test', 'test-all', 'e2e' } {
             $filter = @()
             if ($Command -eq 'test') { $filter = @('--filter', 'Category!=EndToEnd') }
             if ($Command -eq 'e2e') { $filter = @('--filter', 'Category=EndToEnd') }
-            Invoke-Dotnet (@('test', $solution, '-c', $Configuration, '--nologo') + $restoreOptions + $filter + $forwarded)
+            Invoke-Dotnet (@('test', $solution, '-c', $Configuration, '--nologo', '--logger', 'trx',
+                '--results-directory', (Join-Path $DiagnosticsDirectory "test-results/$Command")) + $restoreOptions + $filter + $forwarded)
         }
         { $_ -in 'publish', 'publish-aot', 'app-aot' } {
-            & (Join-Path $PSScriptRoot 'tools/package-aot.ps1') -DotnetPath $DotnetPath -Configuration $Configuration -RestoreOptions $restoreOptions
+            Test-BuildEnvironment -Profile Publish -MsysRoot $MsysRoot
+            if ($forwarded.Count) { throw 'publish does not accept extra dotnet arguments. Use -Version, -Configuration, -PackageSource or -MsysRoot.' }
+            & (Join-Path $PSScriptRoot 'tools/package-aot.ps1') -DotnetPath $DotnetPath -Configuration $Configuration -RestoreOptions $restoreOptions -MsysRoot $MsysRoot -DiagnosticsDirectory $DiagnosticsDirectory
             if ($Command -eq 'app-aot') {
                 Start-Process -FilePath (Join-Path $PSScriptRoot 'artifacts/win-x64-aot/ManiaReplayViewer.exe') -WorkingDirectory $PSScriptRoot
             }
@@ -109,13 +137,13 @@ try {
                 Invoke-Dotnet (@('publish', (Join-Path $PSScriptRoot $entry[0]), '-c', $Configuration, '-r', 'win-x64',
                     '-p:PublishAot=true', '-p:OptimizationPreference=Size', '-p:TrimmerSingleWarn=false', '-o', (Join-Path $toolsOutput $entry[1])) + $restoreOptions)
             }
-            & python (Join-Path $PSScriptRoot 'tools/aotcheck/verify-cli.py') (Join-Path $toolsOutput 'cli/mrm.exe')
+            & python (Join-Path $PSScriptRoot 'tools/aotcheck/verify-cli.py') (Join-Path $toolsOutput 'cli/mrm.exe') 2>&1 | Out-Host
             if ($LASTEXITCODE -ne 0) { throw 'Native CLI verification failed.' }
-            & (Join-Path $toolsOutput 'render/aotcheck.exe') $PSScriptRoot --suite --require-native
+            & (Join-Path $toolsOutput 'render/aotcheck.exe') $PSScriptRoot --suite --require-native 2>&1 | Out-Host
             if ($LASTEXITCODE -ne 0) { throw 'Native render/cache verification failed.' }
             $helperOutput = Join-Path $PSScriptRoot 'artifacts/gamecheck-x86'
             Invoke-Dotnet (@('publish', (Join-Path $PSScriptRoot 'tools/gamecheck/x86target'), '-c', $Configuration, '-o', $helperOutput) + $restoreOptions)
-            & (Join-Path $toolsOutput 'game/gamecheck.exe') memory32 --helper (Join-Path $helperOutput 'x86target.exe')
+            & (Join-Path $toolsOutput 'game/gamecheck.exe') memory32 --helper (Join-Path $helperOutput 'x86target.exe') 2>&1 | Out-Host
             if ($LASTEXITCODE -ne 0) { throw 'Native memory32 verification failed.' }
         }
         'cli' {
@@ -142,3 +170,7 @@ try {
 } finally {
     Pop-Location
 }
+} catch {
+    Write-Host "FAILED ${Command}: $($_.Exception.Message)"
+    throw
+} finally { Stop-Transcript | Out-Null }
