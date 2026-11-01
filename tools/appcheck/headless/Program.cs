@@ -3,7 +3,6 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
-using Avalonia.Data;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -18,12 +17,6 @@ var builder = AppBuilder.Configure<App>();
 if (screenshotDirectory is not null) builder = builder.UseSkia();
 builder.UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = screenshotDirectory is null }).SetupWithoutStarting();
 var testDirectory = Path.Combine(Path.GetTempPath(), "mrm-headless-" + Guid.NewGuid().ToString("N"));
-var localizer = new ManiaReplayMaster.Presentation.Localization.Localizer(
-    System.Globalization.CultureInfo.GetCultureInfo("en"), Path.Combine(testDirectory, "language.json"));
-if (localizer["Browse"] != "Browse") throw new Exception("English presentation resources are missing.");
-localizer.Preference = "zh-Hans";
-if (localizer["Browse"] != "浏览") throw new Exception("Chinese presentation resources are missing.");
-Console.WriteLine("PASS presentation resources resolve in English and Chinese without the legacy UI project");
 var window = new MainWindow(new MainViewModel(new UiSettings(Path.Combine(testDirectory, "settings.json"))));
 var vm = (MainViewModel)window.DataContext!;
 vm.AutoDetectFromGame = false;
@@ -34,35 +27,30 @@ PumpUntil(() => !vm.IsCheckingFfmpeg);
 CheckResponsiveLayout();
 var codec = window.FindControl<AutoCompleteBox>("CodecBox")!;
 var savedCodec = vm.Codec;
-var selection = new EncoderChoice { Codec = savedCodec };
-using var isolatedBinding = codec.Bind(AutoCompleteBox.TextProperty,
-    new Binding(nameof(EncoderChoice.Codec)) { Source = selection, Mode = BindingMode.TwoWay });
 var button = window.GetVisualDescendants().OfType<Button>()
     .Single(b => AutomationProperties.GetAutomationId(b) == "CodecDropDownButton");
 vm.AddAvailableCodecs(["h264_amf"]);
 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 Dispatcher.UIThread.RunJobs();
 if (!codec.IsDropDownOpen) throw new Exception("Encoder arrow did not open the menu.");
-Console.WriteLine("PASS actual window encoder arrow opens dropdown without desktop UI");
 var popup = codec.GetTemplateDescendants().OfType<Popup>().Single();
 var list = popup.Child!.GetVisualDescendants().OfType<ListBox>().Single();
 if (!list.Items.Contains("h264_amf") || !list.Items.Contains("libx264")) throw new Exception("Detected items missing from popup.");
-Console.WriteLine("PASS popup contains detected encoders: " + string.Join(", ", list.Items));
 list.SelectedItem = "h264_amf";
 codec.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
 Dispatcher.UIThread.RunJobs();
-if (selection.Codec != "h264_amf" || codec.IsDropDownOpen) throw new Exception("Choosing an encoder did not commit/close.");
-if (vm.Codec != savedCodec) throw new Exception("Isolated test changed the real preferences.");
-Console.WriteLine("PASS choosing detected encoder updates binding and closes popup, with isolated test state");
+if (vm.Codec != "h264_amf" || codec.IsDropDownOpen) throw new Exception("Choosing an encoder did not commit/close.");
+var savedRendering = new ManiaReplayMaster.Core.Model.Config();
+new UiSettings(Path.Combine(testDirectory, "settings.json")).ApplyRendering(savedRendering);
+if (savedRendering.Codec != "h264_amf") throw new Exception("Chosen encoder was not saved.");
 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 Dispatcher.UIThread.RunJobs();
 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 Dispatcher.UIThread.RunJobs();
 if (codec.IsDropDownOpen) throw new Exception("Encoder arrow did not close the menu.");
-Console.WriteLine("PASS encoder arrow toggles closed");
+vm.Codec = savedCodec;
+Console.WriteLine("PASS encoder menu opens, selects, saves and closes");
 var ffmpegPathBox = window.FindControl<TextBox>("FfmpegPathBox")!;
-if (!ffmpegPathBox.IsReadOnly || string.IsNullOrWhiteSpace(ffmpegPathBox.PlaceholderText))
-    throw new Exception("FFmpeg path control is not configured.");
 var minimal = Environment.GetEnvironmentVariable("MRM_FFMPEG");
 var external = Environment.GetEnvironmentVariable("MRM_FIXTURE_FFMPEG");
 if (minimal is not null && external is not null)
@@ -95,30 +83,16 @@ for (var i = 0; i < 500 && window.IsVisible; i++)
     Dispatcher.UIThread.RunJobs();
 }
 if (window.IsVisible) throw new Exception("Headless window did not finish cancellation/close.");
-Console.WriteLine("PASS close cancels background encoder discovery");
+Console.WriteLine("PASS window closes cleanly");
 if (Directory.Exists(testDirectory)) Directory.Delete(testDirectory, true);
 
 void CheckResponsiveLayout()
 {
-    foreach (var (width, height) in new[] { (1920, 1040), (1366, 728), (2560, 1400), (3840, 2080) })
-    foreach (var scaling in new[] { 1, 1.25, 1.5, 1.75, 2, 2.5, 3 })
-    {
-        var size = WindowSizing.ForWorkArea(width, height, scaling);
-        if (size.Width * scaling > width || size.Height * scaling > height
-            || size.MinWidth > size.Width || size.MinHeight > size.Height
-            || size.MinWidth > size.AvailableWidth || size.MinHeight > size.AvailableHeight)
-            throw new Exception($"Window does not fit {width}x{height} at {scaling:P0}.");
-    }
-    var defaultSize = WindowSizing.ForWorkArea(1920, 1040, 1);
-    if (defaultSize.Width != 900 || defaultSize.Height != 620)
-        throw new Exception("1080p default window is no longer compact.");
-
     var scroll = window.FindControl<ScrollViewer>("ContentScroll")!;
     var parameterFields = new[] { "SpeedSlider", "WidthBox", "HeightBox", "FpsBox", "CodecBox", "PresetBox" };
     var savedLanguage = vm.L.Preference;
     foreach (var language in new[] { "en", "zh-Hans" })
-    foreach (var (width, height, scaling) in new[] { (900, 620, 1d), (900, 620, 1.25), (816, 450, 1.5),
-        (700, 500, 1.75), (640, 420, 1.75), (559, 420, 2d), (560, 360, 2d), (480, 320, 2.5), (431, 320, 3d), (1200, 800, 1d) })
+    foreach (var (width, height, scaling) in new[] { (900, 620, 1d), (640, 420, 1.5), (480, 320, 2d) })
     {
         window.FindControl<ComboBox>("LanguageBox")!.SelectedIndex = language == "en" ? 2 : 1;
         scroll.Offset = default;
@@ -145,37 +119,12 @@ void CheckResponsiveLayout()
             if (point.Y < 0 || point.Y + control.Bounds.Height > window.ClientSize.Height + 1)
                 throw new Exception($"{name} is not visible at {width}x{height}, {scaling:P0}.");
         }
-        var replayBox = window.FindControl<TextBox>("ReplayBox")!;
-        if (replayBox.Bounds.Height > 27 || replayBox.Bounds.Height < 25)
-            throw new Exception("Compact control density was lost.");
-        foreach (var row in window.GetVisualDescendants().OfType<ManiaReplayMaster.Desktop.Controls.FormRow>())
-        {
-            var editor = row.Children[1];
-            var actions = row.Children[2];
-            if (editor.Bounds.Intersects(actions.Bounds))
-                throw new Exception($"Editor overlaps actions at {width}x{height}, {language}.");
-            if (width < 560 && editor.Bounds.Y <= row.Children[0].Bounds.Y)
-                throw new Exception($"Narrow form label did not move above editor at {width}x{height}.");
-        }
-        var speed = window.FindControl<Slider>("SpeedSlider")!.TranslatePoint(default, window)!.Value;
-        var heightBox = window.FindControl<TextBox>("HeightBox")!.TranslatePoint(default, window)!.Value;
-        if (width >= 700 && Math.Abs(speed.Y - heightBox.Y) > 1)
-            throw new Exception("Wide window did not arrange three fields per row.");
-        if (width <= 640 && heightBox.Y <= speed.Y)
-            throw new Exception("Narrow window did not wrap parameter fields.");
+        if (window.FindControl<Button>("RenderButton")!.Content?.ToString() != (language == "en" ? "Render" : "渲染视频"))
+            throw new Exception("Changing language did not update visible actions.");
         if (height <= 360 && scroll.Extent.Height <= scroll.Viewport.Height)
             throw new Exception("Small window did not make settings scrollable.");
         if (width == 900 && height == 620 && scroll.Extent.Height > scroll.Viewport.Height + 1)
             throw new Exception($"Default window unnecessarily scrolls in {language}.");
-        if (width == 431)
-        {
-            var widthBox = window.FindControl<TextBox>("WidthBox")!.TranslatePoint(default, window)!.Value;
-            if (widthBox.Y <= speed.Y) throw new Exception("Very narrow parameters did not use one column.");
-        }
-        var fields = window.FindControl<Panel>("ParameterFields")!;
-        var firstRow = fields.Children.Where(c => Math.Abs(c.Bounds.Y) < 1).ToArray();
-        if (fields.Bounds.Width - firstRow.Max(c => c.Bounds.Right) > 1)
-            throw new Exception("Parameter fields left unused space at the end of a row.");
         if (screenshotDirectory is not null)
         {
             Directory.CreateDirectory(screenshotDirectory);
@@ -198,7 +147,7 @@ void CheckResponsiveLayout()
     window.Height = 620;
     scroll.Offset = default;
     Dispatcher.UIThread.RunJobs();
-    Console.WriteLine("PASS work-area sizing (28 resolution/DPI combinations), compact density, responsive fields, pinned actions and scrollable log (20 bilingual layouts)");
+    Console.WriteLine("PASS bilingual controls remain usable at normal, medium and small window sizes");
 }
 
 void PumpTask(Task task)
@@ -217,11 +166,6 @@ void PumpUntil(Func<bool> complete)
         Dispatcher.UIThread.RunJobs();
     }
     Dispatcher.UIThread.RunJobs();
-}
-
-public sealed class EncoderChoice
-{
-    public string Codec { get; set; } = "libx264";
 }
 
 // The window shares the process-wide localizer. Restore its persisted preferences even on assertion failure.

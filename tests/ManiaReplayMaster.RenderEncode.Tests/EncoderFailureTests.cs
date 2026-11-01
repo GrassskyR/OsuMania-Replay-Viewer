@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using ManiaReplayMaster.Core;
@@ -87,6 +88,26 @@ public class EncoderFailureTests
         {
             RepoPaths.DeleteDirectory(temp);
         }
+    }
+
+    [Fact]
+    public void CancelRunningExport_StopsFfmpegPromptly()
+    {
+        var temp = RepoPaths.CreateTempDirectory();
+        try
+        {
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+            var watch = Stopwatch.StartNew();
+            Assert.Throws<OperationCanceledException>(() => FfmpegRunner.Run(FfmpegProbe.Resolve().Ffmpeg,
+                ["-v", "error", "-re", "-f", "lavfi", "-i", "color=black:s=180x320:r=60", "-t", "30",
+                    "-c:v", "libx264", Path.Combine(temp, "cancel.mp4")],
+                Path.Combine(temp, "cancel.mp4"), 30, "cancel", 0, 100,
+                new ProgressReporter(null), new PortLogger(), cancellation.Token));
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5));
+            // FfmpegRunner waits for process exit before returning cancellation; the file must be released.
+            using var output = File.Open(Path.Combine(temp, "cancel.mp4"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        }
+        finally { RepoPaths.DeleteDirectory(temp); }
     }
 
     private static string WriteSingleSlice(string directory)

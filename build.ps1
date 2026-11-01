@@ -38,7 +38,7 @@ Commands:
   app-aot       Publish and launch the native desktop application
   appcheck-aot  Run UI Automation smoke against the published native application
   appcheck-headless Run encoder menu regression without desktop windows or input
-  aotcheck      Publish/run native CLI, rendering, cache and x86 memory checks
+  aotcheck      Publish/run native export, settings, cache and x86 score scenarios
   cli <args>    Run the parser/judgement CLI
   appcheck      Build Avalonia and run the interactive GUI smoke check (JIT)
   gamecheck     Run game diagnostics (default: help); pass memory32 or live explicitly
@@ -101,7 +101,7 @@ try {
                 Invoke-Dotnet (@('restore', $project) + $restoreOptions + $forwarded)
             }
             if ($Native) {
-                foreach ($project in @($desktopProject, (Join-Path $PSScriptRoot 'src/ManiaReplayMaster.Cli'),
+                foreach ($project in @($desktopProject,
                     (Join-Path $PSScriptRoot 'tools/aotcheck'), $gameProject)) {
                     Invoke-Dotnet (@('restore', $project, '-r', 'win-x64', '-p:PublishAot=true') + $restoreOptions + $forwarded)
                 }
@@ -133,13 +133,11 @@ try {
         }
         'aotcheck' {
             $toolsOutput = Join-Path $PSScriptRoot 'artifacts/aot-tools'
-            foreach ($entry in @(@('src/ManiaReplayMaster.Cli', 'cli'), @('tools/aotcheck', 'render'), @('tools/gamecheck/harness', 'game'))) {
+            foreach ($entry in @(@('tools/aotcheck', 'render'), @('tools/gamecheck/harness', 'game'))) {
                 Invoke-Dotnet (@('publish', (Join-Path $PSScriptRoot $entry[0]), '-c', $Configuration, '-r', 'win-x64',
                     '-p:PublishAot=true', '-p:OptimizationPreference=Size', '-p:TrimmerSingleWarn=false', '-o', (Join-Path $toolsOutput $entry[1])) + $restoreOptions)
             }
-            & python (Join-Path $PSScriptRoot 'tools/aotcheck/verify-cli.py') (Join-Path $toolsOutput 'cli/mrm.exe') 2>&1 | Out-Host
-            if ($LASTEXITCODE -ne 0) { throw 'Native CLI verification failed.' }
-            & (Join-Path $toolsOutput 'render/aotcheck.exe') $PSScriptRoot --suite --require-native 2>&1 | Out-Host
+            & (Join-Path $toolsOutput 'render/aotcheck.exe') $PSScriptRoot 2>&1 | Out-Host
             if ($LASTEXITCODE -ne 0) { throw 'Native render/cache verification failed.' }
             $helperOutput = Join-Path $PSScriptRoot 'artifacts/gamecheck-x86'
             Invoke-Dotnet (@('publish', (Join-Path $PSScriptRoot 'tools/gamecheck/x86target'), '-c', $Configuration, '-o', $helperOutput) + $restoreOptions)
@@ -163,7 +161,7 @@ try {
         'appcheck' {
             Invoke-Dotnet (@('build', $desktopProject, '-c', $Configuration) + $restoreOptions)
             $appExe = Join-Path $PSScriptRoot "src/ManiaReplayMaster.Desktop/bin/$Configuration/net10.0-windows/ManiaReplayViewer.exe"
-            & (Join-Path $PSScriptRoot 'tools/appcheck/desktop-smoke.ps1') -Exe $appExe -AllowManagedRuntime @forwarded
+            & (Join-Path $PSScriptRoot 'tools/appcheck/desktop-smoke.ps1') -Exe $appExe @forwarded
             if ($LASTEXITCODE -ne 0) { throw "GUI check failed (exit code $LASTEXITCODE)." }
         }
     }

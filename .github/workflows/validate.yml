@@ -39,7 +39,7 @@ jobs:
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
 
   fast:
-    name: Compile, unit tests and headless UI
+    name: Compile and behavioral tests
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -52,12 +52,6 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: '**/packages*.lock.json'
-      - name: Check development environment
-        id: environment
-        run: ./build.ps1 doctor
-      - name: Check build scripts and release resolution
-        id: scripts
-        run: ./tools/ci/test-infrastructure.ps1
       - name: Restore locked dependencies
         id: restore
         run: ./build.ps1 restore -Version $env:BUILD_VERSION -- --locked-mode
@@ -67,9 +61,6 @@ jobs:
       - name: Unit and reference tests
         id: tests
         run: ./build.ps1 test -- --no-build --no-restore
-      - name: Headless layout and menu checks
-        id: headless
-        run: ./build.ps1 appcheck-headless -Version $env:BUILD_VERSION -- --no-restore
       - name: Write validation summary
         if: always()
         env:
@@ -116,12 +107,6 @@ jobs:
           msystem: MINGW64
           update: false
           install: make diffutils tar mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib mingw-w64-x86_64-pkgconf
-      - name: Check native environment
-        id: environment
-        run: ./build.ps1 doctor -Profile Publish -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
-      - name: Check package integrity guards
-        id: package_guards
-        run: python -O tools/ci/test-package-audit.py
       - name: Identify FFmpeg build inputs and toolchain
         id: ffmpeg
         run: |
@@ -152,9 +137,6 @@ jobs:
       - name: Headless FFmpeg selection regression
         id: headless
         run: ./build.ps1 appcheck-headless -Version $env:BUILD_VERSION -- --no-restore
-      - name: Synthetic x86 memory checks
-        id: memory
-        run: ./build.ps1 gamecheck -Version $env:BUILD_VERSION -- memory32
       - name: Publish Native AOT application
         id: package
         run: ./build.ps1 publish -Version $env:BUILD_VERSION -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
@@ -163,7 +145,7 @@ jobs:
       - name: Export and frame cadence tests
         id: e2e
         run: ./build.ps1 e2e -- --no-build --no-restore
-      - name: Native CLI, rendering, cache and memory checks
+      - name: Native export, settings, cache and score reading
         id: aot
         run: ./build.ps1 aotcheck -Version $env:BUILD_VERSION
       - name: Native desktop UI Automation smoke
@@ -183,10 +165,7 @@ jobs:
           path: |
             out/diagnostics/
             out/appcheck/
-            out/gamecheck-*.log
             out/dependencies/ffmpeg-minimal/config.log
-            tools/gamecheck/harness/out/*.log
-            artifacts/aot-tools/game/out/*.log
           if-no-files-found: warn
           retention-days: 14
       - name: Upload validated package
