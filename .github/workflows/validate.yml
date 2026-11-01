@@ -76,9 +76,61 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  native:
-    name: FFmpeg, video export and Native AOT
+  ffmpeg:
+    name: Prepare minimal FFmpeg dependency
     needs: [lint, fast]
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      # The recipe selects the dependency version. Toolchain details are recorded
+      # in the built package, and are not needed to reuse that exact binary.
+      - name: Restore minimal FFmpeg package
+        id: package
+        uses: actions/cache@v5
+        with:
+          path: out/dependencies/ffmpeg-minimal/package/
+          key: ffmpeg-win-x64-v3-${{ hashFiles('tools/ffmpeg/**') }}
+      - uses: msys2/setup-msys2@v2
+        if: steps.package.outputs.cache-hit != 'true'
+        id: msys2
+        with:
+          msystem: MINGW64
+          update: false
+          install: make diffutils tar mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib mingw-w64-x86_64-pkgconf
+      - name: Cache verified FFmpeg source downloads
+        if: steps.package.outputs.cache-hit != 'true'
+        uses: actions/cache@v5
+        with:
+          path: out/dependencies/ffmpeg-minimal/downloads/
+          key: ffmpeg-sources-v2-${{ hashFiles('tools/ffmpeg/sources.json') }}
+      - name: Build minimal FFmpeg on cache miss
+        if: steps.package.outputs.cache-hit != 'true'
+        run: ./tools/ffmpeg/build-minimal.ps1 -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
+      - name: Upload FFmpeg dependency
+        uses: actions/upload-artifact@v6
+        with:
+          name: ffmpeg-win-x64
+          path: out/dependencies/ffmpeg-minimal/package/
+          if-no-files-found: error
+          retention-days: 1
+      - name: Upload FFmpeg build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ffmpeg-build-diagnostics
+          path: |
+            out/diagnostics/ffmpeg.log
+            out/dependencies/ffmpeg-minimal/config.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  native:
+    name: Video export and Native AOT
+    needs: [fast, ffmpeg]
     runs-on: windows-2025
     timeout-minutes: 60
     env:
@@ -101,30 +153,11 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-      - uses: msys2/setup-msys2@v2
-        id: msys2
+      - name: Download minimal FFmpeg dependency
+        uses: actions/download-artifact@v5
         with:
-          msystem: MINGW64
-          update: false
-          install: make diffutils tar mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib mingw-w64-x86_64-pkgconf
-      - name: Identify FFmpeg build inputs and toolchain
-        id: ffmpeg
-        run: |
-          $fingerprint = ./tools/ffmpeg/get-build-fingerprint.ps1 -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
-          "fingerprint=$fingerprint" >> $env:GITHUB_OUTPUT
-      - name: Cache verified FFmpeg source downloads
-        uses: actions/cache@v5
-        with:
-          path: out/dependencies/ffmpeg-minimal/downloads/
-          key: ffmpeg-sources-v2-${{ hashFiles('tools/ffmpeg/sources.json') }}
-      - name: Cache minimal FFmpeg package
-        uses: actions/cache@v5
-        with:
+          name: ffmpeg-win-x64
           path: out/dependencies/ffmpeg-minimal/package/
-          key: ffmpeg-win-x64-v2-${{ steps.ffmpeg.outputs.fingerprint }}
-      - name: Build minimal FFmpeg
-        id: ffmpeg_build
-        run: ./tools/ffmpeg/build-minimal.ps1 -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
       - name: Restore locked dependencies
         id: restore
         run: ./build.ps1 restore -Native -Version $env:BUILD_VERSION -- --locked-mode
@@ -139,7 +172,7 @@ jobs:
         run: ./build.ps1 appcheck-headless -Version $env:BUILD_VERSION -- --no-restore
       - name: Publish Native AOT application
         id: package
-        run: ./build.ps1 publish -Version $env:BUILD_VERSION -MsysRoot '${{ steps.msys2.outputs.msys2-location }}'
+        run: ./build.ps1 publish -Version $env:BUILD_VERSION -FfmpegPackage out/dependencies/ffmpeg-minimal/package
       - name: Select the packaged FFmpeg for acceptance tests
         run: '"MRM_FFMPEG=$PWD/artifacts/win-x64-aot/ffmpeg.exe" >> $env:GITHUB_ENV'
       - name: Export and frame cadence tests
@@ -165,7 +198,6 @@ jobs:
           path: |
             out/diagnostics/
             out/appcheck/
-            out/dependencies/ffmpeg-minimal/config.log
           if-no-files-found: warn
           retention-days: 14
       - name: Upload validated package

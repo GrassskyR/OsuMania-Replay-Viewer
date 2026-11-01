@@ -12,6 +12,7 @@ param(
     [ValidateSet('Development', 'Publish')]
     [string]$Profile = 'Development',
     [string]$MsysRoot = 'C:/msys64',
+    [string]$FfmpegPackage = '',
     [string]$Version = '',
     [string]$DiagnosticsDirectory = 'out/diagnostics',
     [switch]$Native,
@@ -45,6 +46,7 @@ Commands:
 
 Options: -Configuration Debug|Release, -DotnetPath <dotnet.exe>, -PackageSource <feed>
          -Version <MAJOR.MINOR.PATCH[-prerelease]>, -MsysRoot <directory>
+         -FfmpegPackage <directory> (use a prebuilt minimal FFmpeg package)
          -DiagnosticsDirectory <directory> (default: out/diagnostics)
 CLI/gamecheck arguments follow --, for example: ./build.ps1 cli -- dump-map file.osu
 '@
@@ -94,7 +96,7 @@ Push-Location $PSScriptRoot
 try {
     $script:invocation = 0
     switch ($Command) {
-        'doctor' { Test-BuildEnvironment -Profile $Profile -MsysRoot $MsysRoot }
+        'doctor' { Test-BuildEnvironment -Profile $Profile -MsysRoot $MsysRoot -FfmpegPackage $FfmpegPackage }
         'restore' {
             foreach ($project in @($solution, (Join-Path $PSScriptRoot 'tools/appcheck/headless'), $gameProject,
                 (Join-Path $PSScriptRoot 'tools/gamecheck/x86target'))) {
@@ -116,9 +118,9 @@ try {
                 '--results-directory', (Join-Path $DiagnosticsDirectory "test-results/$Command")) + $restoreOptions + $filter + $forwarded)
         }
         { $_ -in 'publish', 'publish-aot', 'app-aot' } {
-            Test-BuildEnvironment -Profile Publish -MsysRoot $MsysRoot
-            if ($forwarded.Count) { throw 'publish does not accept extra dotnet arguments. Use -Version, -Configuration, -PackageSource or -MsysRoot.' }
-            & (Join-Path $PSScriptRoot 'tools/package-aot.ps1') -DotnetPath $DotnetPath -Configuration $Configuration -RestoreOptions $restoreOptions -MsysRoot $MsysRoot -DiagnosticsDirectory $DiagnosticsDirectory
+            Test-BuildEnvironment -Profile Publish -MsysRoot $MsysRoot -FfmpegPackage $FfmpegPackage
+            if ($forwarded.Count) { throw 'publish does not accept extra dotnet arguments. Use -Version, -Configuration, -PackageSource, -MsysRoot or -FfmpegPackage.' }
+            & (Join-Path $PSScriptRoot 'tools/package-aot.ps1') -DotnetPath $DotnetPath -Configuration $Configuration -RestoreOptions $restoreOptions -MsysRoot $MsysRoot -FfmpegPackage $FfmpegPackage -DiagnosticsDirectory $DiagnosticsDirectory
             if ($Command -eq 'app-aot') {
                 Start-Process -FilePath (Join-Path $PSScriptRoot 'artifacts/win-x64-aot/ManiaReplayViewer.exe') -WorkingDirectory $PSScriptRoot
             }

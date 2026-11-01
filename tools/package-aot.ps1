@@ -1,7 +1,7 @@
 # Publish into a new staging directory; retain any previous output as a recoverable backup.
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$DotnetPath, [string]$Configuration = 'Release', [string[]]$RestoreOptions = @(),
-    [string]$MsysRoot = 'C:/msys64', [string]$DiagnosticsDirectory = '')
+    [string]$MsysRoot = 'C:/msys64', [string]$FfmpegPackage = '', [string]$DiagnosticsDirectory = '')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = Split-Path -Parent $PSScriptRoot
@@ -26,7 +26,7 @@ if ($DiagnosticsDirectory) { $publishOptions += "-bl:$(Join-Path $DiagnosticsDir
     -p:PublishAot=true -p:OptimizationPreference=Size -p:DebugType=None -p:DebugSymbols=false `
     -p:ILLinkTreatWarningsAsErrors=true -p:IlcTreatWarningsAsErrors=true -o $staging @publishOptions 2>&1 | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "AOT publish failed. Staging retained at $staging" }
-& (Join-Path $PSScriptRoot 'package-ffmpeg.ps1') -Destination $staging -MsysRoot $MsysRoot
+& (Join-Path $PSScriptRoot 'package-ffmpeg.ps1') -Destination $staging -MsysRoot $MsysRoot -PackageDirectory $FfmpegPackage
 
 $revision = & git -C $repo rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the package source commit.' }

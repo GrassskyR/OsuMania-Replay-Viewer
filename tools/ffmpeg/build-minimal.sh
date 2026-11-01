@@ -48,11 +48,22 @@ strip "$root/package/ffmpeg.exe"
 cp COPYING.GPLv3 "$root/package/licenses/ffmpeg/FFmpeg-GPL-3.0.txt"
 cp "$work/src/x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55/COPYING" "$root/package/licenses/ffmpeg/x264-COPYING.txt"
 cp "$work/src/lame-3.100/COPYING" "$root/package/licenses/ffmpeg/LAME-COPYING.txt"
-cp /mingw64/share/licenses/zlib/LICENSE "$root/package/licenses/ffmpeg/zlib-LICENSE.txt"
-for license in COPYING.LIB COPYING.RUNTIME COPYING3 README; do
-    cp "/mingw64/share/licenses/gcc-libs/$license" "$root/package/licenses/ffmpeg/GCC-$license.txt"
-done
-cp /mingw64/share/licenses/winpthreads/COPYING "$root/package/licenses/ffmpeg/winpthreads-COPYING.txt"
+# MSYS2 split gcc-libs into cc-libs/libgcc and moved its notices. Use the installed
+# package manifests so both old and new layouts work without guessing filenames.
+packages="$(pacman -Qq)"
+while IFS= read -r package; do
+    case "$package" in
+        mingw-w64-x86_64-gcc*|mingw-w64-x86_64-cc-libs|mingw-w64-x86_64-libgcc|mingw-w64-x86_64-*winpthread*|mingw-w64-x86_64-crt|mingw-w64-x86_64-zlib)
+            files="$(pacman -Ql "$package")"
+            while read -r owner license; do
+                if [[ "$license" == */share/licenses/* && -f "$license" ]]; then
+                    relative="${license#*/share/licenses/}"
+                    cp "$license" "$root/package/licenses/ffmpeg/$owner-${relative//\//-}.txt"
+                fi
+            done <<< "$files"
+            ;;
+    esac
+done <<< "$packages"
 cp ffbuild/config.log "$root/config.log"
 "$root/package/ffmpeg.exe" -version > "$root/package/licenses/ffmpeg/BUILD.txt"
 "$root/package/ffmpeg.exe" -hide_banner -encoders > "$root/package/licenses/ffmpeg/ENCODERS.txt"

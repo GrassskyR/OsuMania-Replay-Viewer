@@ -40,7 +40,7 @@ function Resolve-BuildDotnet {
 }
 
 function Test-BuildEnvironment {
-    param([ValidateSet('Development', 'Publish')][string]$Profile, [string]$MsysRoot)
+    param([ValidateSet('Development', 'Publish')][string]$Profile, [string]$MsysRoot, [string]$FfmpegPackage = '')
     if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'Install PowerShell 7: winget install Microsoft.PowerShell' }
     Write-Host 'PASS Windows, PowerShell 7 and compatible x64 .NET SDK'
     if ($Profile -eq 'Development') { return }
@@ -59,6 +59,15 @@ function Test-BuildEnvironment {
         throw 'Windows SDK x64 libraries are missing. Add a Windows 10/11 SDK in Visual Studio Installer.'
     }
     Write-Host "PASS MSVC ($compiler) and Windows SDK ($kits)"
+    if ($FfmpegPackage) {
+        foreach ($file in @('ffmpeg.exe', 'ffmpeg.sha256')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $FfmpegPackage $file) -PathType Leaf)) {
+                throw "Prebuilt FFmpeg package is missing $file at $FfmpegPackage"
+            }
+        }
+        Write-Host "Using prebuilt FFmpeg package ($FfmpegPackage)"
+        return
+    }
     foreach ($relative in @('usr/bin/bash.exe', 'usr/bin/make.exe', 'usr/bin/diff.exe', 'usr/bin/tar.exe',
         'mingw64/bin/gcc.exe', 'mingw64/bin/pkg-config.exe', 'mingw64/lib/libz.a')) {
         if (-not (Test-Path -LiteralPath (Join-Path $MsysRoot $relative))) {
