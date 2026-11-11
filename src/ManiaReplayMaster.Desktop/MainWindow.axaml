@@ -17,6 +17,9 @@
     <Style Selector="atom|Window.narrow controls|FormRow">
       <Setter Property="IsStacked" Value="True" />
     </Style>
+    <Style Selector="atom|AutoComplete#CodecBox /template/ :is(TextBox)#PART_TextBox">
+      <Setter Property="AutomationProperties.AutomationId" Value="CodecBox" />
+    </Style>
   </atom:Window.Styles>
 
   <Grid Margin="12">
@@ -133,7 +136,7 @@
               <Grid ColumnDefinitions="76,*">
                 <TextBlock Text="{Binding L[Codec]}" Classes="label" />
                 <Grid Grid.Column="1">
-                <atom:AutoComplete x:Name="CodecBox" AutomationProperties.AutomationId="CodecBox" MinWidth="0"
+                <atom:AutoComplete x:Name="CodecBox" MinWidth="0"
                         MinimumPrefixLength="0" IsCompletionEnabled="False"
                         atom:ToolTip.Tip="{Binding L[Codec.Tooltip]}" Value="{Binding Codec, Mode=TwoWay}">
                   <atom:AutoComplete.ContentRightAddOn>

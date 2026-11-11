@@ -6,6 +6,8 @@ using AtomUI.Theme.Algorithms;
 using AtomUI.Theme.Configuration;
 using Avalonia;
 using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
@@ -47,6 +49,10 @@ Dispatcher.UIThread.RunJobs();
 PumpUntil(() => !vm.IsCheckingFfmpeg);
 CheckResponsiveLayout();
 var codec = window.FindControl<AutoComplete>("CodecBox")!;
+var codecInput = codec.GetTemplateDescendants().OfType<TextBox>().Single();
+if (AutomationProperties.GetAutomationId(codecInput) != "CodecBox"
+    || ControlAutomationPeer.CreatePeerForElement(codecInput) is not IValueProvider { IsReadOnly: false })
+    throw new Exception("Encoder input is not exposed as an editable CodecBox automation element.");
 var savedCodec = vm.Codec;
 var button = window.GetVisualDescendants().OfType<Button>()
     .Single(b => AutomationProperties.GetAutomationId(b) == "CodecDropDownButton");
@@ -73,6 +79,22 @@ Dispatcher.UIThread.RunJobs();
 if (codec.IsDropDownOpen) throw new Exception("Encoder arrow did not close the menu.");
 vm.Codec = savedCodec;
 Console.WriteLine("PASS encoder menu opens, selects, saves and closes");
+var logBox = window.FindControl<ListBox>("LogBox")!;
+for (var i = 0; i < 20; i++)
+{
+    vm.Log($"Log entry {i}");
+    Dispatcher.UIThread.RunJobs();
+}
+vm.Log("notes 2711, actions 2515\naccuracy 75.89%\njudgement counts (ordered): 805, 776, 585, 251, 16, 279");
+Dispatcher.UIThread.RunJobs();
+AvaloniaHeadlessPlatform.ForceRenderTimerTick(3);
+Dispatcher.UIThread.RunJobs();
+var lastLogRow = logBox.ContainerFromIndex(vm.LogLines.Count - 1)
+    ?? throw new Exception("Latest log entry is not realized for UI Automation.");
+var logPoint = lastLogRow.TranslatePoint(default, logBox)!.Value;
+if (logPoint.Y < 0 || logPoint.Y + lastLogRow.Bounds.Height > logBox.Bounds.Height + 1)
+    throw new Exception("Latest judgement summary is outside the log viewport.");
+Console.WriteLine("PASS virtualized log follows the latest multiline judgement summary");
 var ffmpegPathBox = window.FindControl<TextBox>("FfmpegPathBox")!;
 var minimal = Environment.GetEnvironmentVariable("MRM_FFMPEG");
 var external = Environment.GetEnvironmentVariable("MRM_FIXTURE_FFMPEG");

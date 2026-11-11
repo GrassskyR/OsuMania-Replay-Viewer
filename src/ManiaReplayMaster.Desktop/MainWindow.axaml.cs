@@ -43,6 +43,7 @@ public partial class MainWindow : Window
         _vm = viewModel;
         InitializeComponent();
         DataContext = _vm;
+        _vm.LogLines.CollectionChanged += (_, _) => LogBox.ScrollIntoView(_vm.LogLines[^1]);
         UpdateCodecOptions();
         _vm.CodecChoices.CollectionChanged += OnCodecChoicesChanged;
         // Preserve the full encoder menu even when a codec is already entered.
