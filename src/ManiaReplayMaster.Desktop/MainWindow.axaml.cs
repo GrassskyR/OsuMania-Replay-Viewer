@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO;
+using AtomUI;
+using AtomUI.Localization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -14,6 +16,7 @@ using ManiaReplayMaster.Encode;
 using ManiaReplayMaster.Presentation.Localization;
 using static ManiaReplayMaster.Presentation.Localization.Localizer;
 using PipelineRunner = ManiaReplayMaster.Core.Pipeline.Pipeline;
+using Window = AtomUI.Desktop.Controls.Window;
 
 namespace ManiaReplayMaster.Desktop;
 
@@ -40,6 +43,10 @@ public partial class MainWindow : Window
         _vm = viewModel;
         InitializeComponent();
         DataContext = _vm;
+        UpdateCodecOptions();
+        _vm.CodecChoices.CollectionChanged += OnCodecChoicesChanged;
+        // Preserve the full encoder menu even when a codec is already entered.
+        CodecBox.Filter = null;
         Closing += OnClosing;
         ApplyScreenBounds(initial: true, center: false);
         Opened += (_, _) =>
@@ -336,10 +343,21 @@ public partial class MainWindow : Window
         CodecBox.IsDropDownOpen = open;
     }
 
+    private void OnCodecChoicesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => UpdateCodecOptions();
+
+    private void UpdateCodecOptions()
+        => CodecBox.OptionsSource = _vm.CodecChoices.Select(codec =>
+            new AtomUI.Desktop.Controls.AutoCompleteOption { Header = codec, Content = codec }).ToArray();
+
     private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == "Item[]")
+        {
+            var language = Localizer.ResolveLanguage(_vm.L.Preference, System.Globalization.CultureInfo.CurrentUICulture);
+            Application.Current!.GetLanguageManager()!.ChangeLanguage(language == "zh-Hans" ? LanguageTags.ZhCN : LanguageTags.EnUS);
             RefreshCandidateList();
+        }
     }
 
     private void OnLanguageSelected(object? sender, SelectionChangedEventArgs e)
@@ -533,6 +551,7 @@ public partial class MainWindow : Window
         if (_encoderDetection is { } detection) await detection;
         _encoderDetectionCancellation.Dispose();
         Localizer.Current.PropertyChanged -= OnLanguageChanged;
+        _vm.CodecChoices.CollectionChanged -= OnCodecChoicesChanged;
         _vm.Dispose();
         _allowClose = true;
         Dispatcher.UIThread.Post(Close);

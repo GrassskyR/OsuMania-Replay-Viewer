@@ -11,8 +11,8 @@
     <SatelliteResourceLanguages>en;zh-Hans</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
+    <PackageReference Include="AtomUI.Desktop.Controls" Version="6.2.13" />
     <ProjectReference Include="../ManiaReplayMaster.Presentation/ManiaReplayMaster.Presentation.csproj" />
     <ProjectReference Include="../ManiaReplayMaster.Render/ManiaReplayMaster.Render.csproj" />
     <Content Include="../../LICENSE;../../NOTICE;../../THIRD-PARTY-NOTICES.md;../../README.md" Link="%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />

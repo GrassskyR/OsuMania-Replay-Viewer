@@ -1,6 +1,6 @@
 # Mania Replay Viewer
 
-将 osu!mania、osu!taiko 和 Malody 的回放渲染为 MP4 视频的 Windows 工具。基于 C# / .NET 10 和 Avalonia，支持自定义渲染参数、硬件编码、中英文界面及 osu!stable 成绩自动识别。
+将 osu!mania、osu!taiko 和 Malody 的回放渲染为 MP4 视频的 Windows 工具。基于 C# / .NET 10、Avalonia 12.1.5 和 AtomUI 6.2.13，采用暗色紧凑界面，支持自定义渲染参数、硬件编码、中英文界面及 osu!stable 成绩自动识别。
 
 ## 运行方式
 

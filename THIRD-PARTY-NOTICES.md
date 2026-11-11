@@ -28,7 +28,8 @@ by the project-wide GPL-3.0 terms.
 |---|---|---|
 | [SharpCompress](https://github.com/adamhathcock/sharpcompress) | 0.48.1 | [MIT, Adam Hathcock](licenses/SharpCompress.txt) |
 | [ZstdSharp.Port](https://github.com/oleg-st/ZstdSharp) | 0.8.0 (transitive) | [MIT, Oleg Stepanischev](licenses/ZstdSharp.txt); underlying [Zstandard BSD license](licenses/Zstandard.txt) |
-| [Avalonia](https://github.com/AvaloniaUI/Avalonia) | 12.1.4 | [MIT](licenses/Avalonia.txt) |
+| [Avalonia](https://github.com/AvaloniaUI/Avalonia) | 12.1.5 | [MIT](licenses/Avalonia.txt) |
+| [AtomUI](https://github.com/AtomUI/AtomUI), including controls, theme, localization and icons | 6.2.13 | [LGPL-3.0](licenses/LGPL-3.0.txt); package notices in `licenses/packages/` |
 | [SkiaSharp](https://github.com/mono/SkiaSharp) / Windows native assets | 3.119.4 | MIT and native third-party notices in `licenses/packages/` |
 | [HarfBuzzSharp](https://github.com/mono/SkiaSharp) / Windows native assets | 8.3.1.3 | MIT and native third-party notices in `licenses/packages/` |
 | [Avalonia ANGLE](https://github.com/AvaloniaUI/angle) | 2.1.27548.20260419 | BSD and third-party notices from package LICENSE in `licenses/packages/` |
