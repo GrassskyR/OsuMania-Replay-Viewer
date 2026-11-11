@@ -64,7 +64,7 @@ jobs:
           ref: ${{ needs.revision.outputs.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           name: ManiaReplayViewer-win-x64-aot
           path: artifacts/

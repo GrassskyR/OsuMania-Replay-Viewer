@@ -5,7 +5,7 @@
         xmlns:vm="using:ManiaReplayMaster.Presentation"
         xmlns:controls="using:ManiaReplayMaster.Desktop.Controls"
         x:DataType="vm:MainViewModel" x:CompileBindings="True"
-        Title="Mania Replay Viewer" Height="620" Width="900"
+        Title="Mania Replay Viewer" Icon="/Assets/app-icon.ico" Height="620" Width="900"
         MinHeight="320" MinWidth="480"
         WindowStartupLocation="CenterScreen"
         FontFamily="{atom:SharedTokenResource FontFamily}" FontSize="{atom:SharedTokenResource FontSize}" UseLayoutRounding="True"

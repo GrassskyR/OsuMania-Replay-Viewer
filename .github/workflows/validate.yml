@@ -154,7 +154,7 @@ jobs:
         with:
           arch: x64
       - name: Download minimal FFmpeg dependency
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: ffmpeg-win-x64
           path: out/dependencies/ffmpeg-minimal/package/

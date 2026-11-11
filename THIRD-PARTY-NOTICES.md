@@ -34,7 +34,7 @@ by the project-wide GPL-3.0 terms.
 | [HarfBuzzSharp](https://github.com/mono/SkiaSharp) / Windows native assets | 8.3.1.3 | MIT and native third-party notices in `licenses/packages/` |
 | [Avalonia ANGLE](https://github.com/AvaloniaUI/angle) | 2.1.27548.20260419 | BSD and third-party notices from package LICENSE in `licenses/packages/` |
 | [System.Drawing.Common](https://github.com/dotnet/winforms) | 10.0.0 | MIT and third-party notices in `licenses/packages/` |
-| [.NET Native AOT runtime](https://github.com/dotnet/runtime) | 10.0.13 (SDK 10.0.402) | MIT and runtime ThirdPartyNotices in `licenses/packages/` |
+| [.NET Native AOT runtime](https://github.com/dotnet/runtime) | 10.0.15 (SDK 10.0.404) | MIT and runtime ThirdPartyNotices in `licenses/packages/` |
 
 Test-only dependencies (xUnit and Microsoft.NET.Test.Sdk) are restored by NuGet;
 they are not shipped with the application.

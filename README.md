@@ -14,7 +14,7 @@
 
 ## 构建方法和要求
 
-开发构建需要 Windows、PowerShell 7 和 [.NET SDK 10.0.402 x64](https://dotnet.microsoft.com/download/dotnet/10.0)。
+开发构建需要 Windows、PowerShell 7 和 [.NET SDK 10.0.404 x64](https://dotnet.microsoft.com/download/dotnet/10.0)。
 
 ```powershell
 ./build.ps1 doctor         # 检查开发环境

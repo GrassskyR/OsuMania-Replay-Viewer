@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none" role="img" aria-labelledby="title description">
+  <title id="title">Mania Replay Viewer</title>
+  <desc id="description">Four rhythm-game note lanes inside a blue and violet replay arrow on a dark rounded square.</desc>
+  <defs>
+    <linearGradient id="surface" x1="32" y1="16" x2="224" y2="248" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#242C43" />
+      <stop offset="1" stop-color="#101421" />
+    </linearGradient>
+    <linearGradient id="replay" x1="58" y1="64" x2="194" y2="196" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6AD9FF" />
+      <stop offset="0.48" stop-color="#528FFF" />
+      <stop offset="1" stop-color="#A080FF" />
+    </linearGradient>
+    <linearGradient id="hold" x1="164" y1="117" x2="164" y2="157" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A080FF" stop-opacity="0.08" />
+      <stop offset="1" stop-color="#A080FF" stop-opacity="0.5" />
+    </linearGradient>
+  </defs>
+
+  <!-- Inset corners leave a transparent margin around the application tile. -->
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="url(#surface)" />
+  <rect x="8.75" y="8.75" width="238.5" height="238.5" rx="53.25" stroke="#899FC9" stroke-opacity="0.18" stroke-width="1.5" />
+
+  <!-- A broad replay gesture remains recognizable at taskbar sizes. -->
+  <path d="M 59 145 A 72 72 0 1 0 70 85" stroke="url(#replay)" stroke-width="14" stroke-linecap="round" />
+  <path d="M 60 97 L 62 65 L 94 72 Z" fill="#6AD9FF" stroke="#6AD9FF" stroke-width="3" stroke-linejoin="round" />
+
+  <!-- Four lanes, staggered tap notes, and one sustained note. -->
+  <path d="M 92 107 V 165 M 116 89 V 165 M 140 89 V 165 M 164 107 V 165" stroke="#7186AD" stroke-opacity="0.22" stroke-width="2" stroke-linecap="round" />
+  <rect x="83" y="122" width="18" height="13" rx="4" fill="#6AD9FF" />
+  <rect x="107" y="98" width="18" height="13" rx="4" fill="#73B8FF" />
+  <rect x="131" y="132" width="18" height="13" rx="4" fill="#829CFF" />
+  <rect x="158" y="117" width="12" height="40" rx="5" fill="url(#hold)" />
+  <rect x="155" y="149" width="18" height="13" rx="4" fill="#B397FF" />
+  <path d="M 84 172 H 172" stroke="#D8E6FF" stroke-opacity="0.65" stroke-width="3" stroke-linecap="round" />
+</svg>
