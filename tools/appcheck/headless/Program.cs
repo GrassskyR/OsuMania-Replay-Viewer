@@ -1,9 +1,3 @@
-using AtomUI;
-using AtomUI.Desktop.Controls;
-using AtomUI.Localization;
-using AtomUI.Theme;
-using AtomUI.Theme.Algorithms;
-using AtomUI.Theme.Configuration;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Automation.Peers;
@@ -16,27 +10,12 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using ManiaReplayMaster.Presentation;
 using ManiaReplayMaster.Desktop;
-using Button = Avalonia.Controls.Button;
-using ComboBox = Avalonia.Controls.ComboBox;
-using ListBox = Avalonia.Controls.ListBox;
-using ScrollViewer = Avalonia.Controls.ScrollViewer;
-using TextBox = Avalonia.Controls.TextBox;
-using Popup = AtomUI.Desktop.Controls.Popup;
+using ManiaReplayMaster.Presentation;
 
 var screenshotDirectory = Environment.GetEnvironmentVariable("MRM_LAYOUT_SCREENSHOTS");
 using var preferences = new RestorePreferences();
-var builder = AppBuilder.Configure<App>().UseAtomUI(atom =>
-{
-    atom.UseDesktopControls();
-    atom.UseLanguages(LanguageTags.EnUS, [LanguageTags.EnUS, LanguageTags.ZhCN]);
-    atom.WithInitialTheme(IThemeManager.DEFAULT_THEME_ID, new ThemeConfigBuilder()
-        .WithAlgorithms(ThemeAlgorithm.Dark, ThemeAlgorithm.Compact)
-        .WithToken("FontFamily", "Segoe UI, Microsoft YaHei")
-        .WithToken("FontSize", "13")
-        .Build());
-});
+var builder = AppBuilder.Configure<App>();
 if (screenshotDirectory is not null) builder = builder.UseSkia();
 builder.UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = screenshotDirectory is null }).SetupWithoutStarting();
 var testDirectory = Path.Combine(Path.GetTempPath(), "mrm-headless-" + Guid.NewGuid().ToString("N"));
@@ -48,7 +27,7 @@ window.Show();
 Dispatcher.UIThread.RunJobs();
 PumpUntil(() => !vm.IsCheckingFfmpeg);
 CheckResponsiveLayout();
-var codec = window.FindControl<AutoComplete>("CodecBox")!;
+var codec = window.FindControl<AutoCompleteBox>("CodecBox")!;
 var codecInput = codec.GetTemplateDescendants().OfType<TextBox>().Single();
 if (AutomationProperties.GetAutomationId(codecInput) != "CodecBox"
     || ControlAutomationPeer.CreatePeerForElement(codecInput) is not IValueProvider { IsReadOnly: false })
@@ -62,10 +41,9 @@ Dispatcher.UIThread.RunJobs();
 if (!codec.IsDropDownOpen) throw new Exception("Encoder arrow did not open the menu.");
 var popup = codec.GetTemplateDescendants().OfType<Popup>().Single();
 var list = popup.Child!.GetVisualDescendants().OfType<ListBox>().Single();
-var options = list.Items.Cast<IAutoCompleteOption>().ToArray();
-if (!options.Any(option => option.Header?.ToString() == "h264_amf") || !options.Any(option => option.Header?.ToString() == "libx264"))
+if (!list.Items.Contains("h264_amf") || !list.Items.Contains("libx264"))
     throw new Exception("Detected items missing from popup.");
-list.SelectedItem = options.Single(option => option.Header?.ToString() == "h264_amf");
+list.SelectedItem = "h264_amf";
 codec.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
 Dispatcher.UIThread.RunJobs();
 if (vm.Codec != "h264_amf" || codec.IsDropDownOpen) throw new Exception("Choosing an encoder did not commit/close.");

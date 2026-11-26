@@ -1,32 +1,446 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:atom="https://atomui.net"
              x:Class="ManiaReplayMaster.Desktop.App" RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <Color x:Key="SystemAccentColor">#FF2F7CF6</Color>
+      <Color x:Key="SystemAccentColorDark1">#FF1E65D6</Color>
+      <Color x:Key="SystemAccentColorLight1">#FF478DF8</Color>
+      <Color x:Key="SystemAccentColorLight2">#FF7AB0FF</Color>
+
+      <!-- Three-tier dark surface hierarchy -->
+      <SolidColorBrush x:Key="ColorBgLayout" Color="#FF0F1117" />
+      <SolidColorBrush x:Key="ColorBgChrome" Color="#FF12151E" />
+      <SolidColorBrush x:Key="ColorBgFooter" Color="#FF131720" />
+      <SolidColorBrush x:Key="ColorBgContainer" Color="#FF161A23" />
+      <SolidColorBrush x:Key="ColorBgInput" Color="#FF10131A" />
+      <SolidColorBrush x:Key="ColorBgLog" Color="#FF0C0E14" />
+      <SolidColorBrush x:Key="ColorBgElevated" Color="#FF1F2533" />
+      <SolidColorBrush x:Key="ColorBgElevatedHover" Color="#FF283042" />
+      <SolidColorBrush x:Key="ColorFillTertiary" Color="#FF1D2230" />
+
+      <!-- Borders -->
+      <SolidColorBrush x:Key="ColorBorder" Color="#FF343D4F" />
+      <SolidColorBrush x:Key="ColorBorderHover" Color="#FF495670" />
+      <SolidColorBrush x:Key="ColorBorderSecondary" Color="#FF252B38" />
+      <SolidColorBrush x:Key="ColorSplit" Color="#FF222836" />
+
+      <!-- Typography -->
+      <SolidColorBrush x:Key="ColorText" Color="#FFE6E9F0" />
+      <SolidColorBrush x:Key="ColorTextHeading" Color="#FFD6DCE8" />
+      <SolidColorBrush x:Key="ColorTextSecondary" Color="#FF949DB0" />
+      <SolidColorBrush x:Key="ColorTextMuted" Color="#FF646E82" />
+      <SolidColorBrush x:Key="ColorTextDisabled" Color="#FF555E70" />
+
+      <!-- Accents & semantics -->
+      <SolidColorBrush x:Key="ColorPrimary" Color="#FF2F7CF6" />
+      <SolidColorBrush x:Key="ColorPrimaryHover" Color="#FF478DF8" />
+      <SolidColorBrush x:Key="ColorPrimaryActive" Color="#FF1E65D6" />
+      <SolidColorBrush x:Key="ColorPrimarySoft" Color="#242F7CF6" />
+      <SolidColorBrush x:Key="ColorPrimaryText" Color="#FF93C5FD" />
+      <SolidColorBrush x:Key="ColorDropBg" Color="#102F7CF6" />
+      <SolidColorBrush x:Key="ColorDropBorder" Color="#FF33415C" />
+      <SolidColorBrush x:Key="ColorDropText" Color="#FF9AB8E8" />
+
+      <SolidColorBrush x:Key="ColorOnlineBg" Color="#2422C55E" />
+      <SolidColorBrush x:Key="ColorOnlineBorder" Color="#4722C55E" />
+      <SolidColorBrush x:Key="ColorOnlineText" Color="#FF86EFAC" />
+      <SolidColorBrush x:Key="ColorOfflineBg" Color="#1A949DB0" />
+      <SolidColorBrush x:Key="ColorOfflineBorder" Color="#38949DB0" />
+
+      <SolidColorBrush x:Key="ColorDangerBg" Color="#1FEF4444" />
+      <SolidColorBrush x:Key="ColorDangerBgHover" Color="#36EF4444" />
+      <SolidColorBrush x:Key="ColorDangerBorder" Color="#59EF4444" />
+      <SolidColorBrush x:Key="ColorDangerText" Color="#FFFCA5A5" />
+
+      <LinearGradientBrush x:Key="BrandIconGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+        <GradientStop Color="#FF2563EB" Offset="0" />
+        <GradientStop Color="#FF4F46E5" Offset="0.52" />
+        <GradientStop Color="#FF7C3AED" Offset="1" />
+      </LinearGradientBrush>
+
+      <LinearGradientBrush x:Key="ResultBannerGradient" StartPoint="0%,50%" EndPoint="100%,50%">
+        <GradientStop Color="#1F22C55E" Offset="0" />
+        <GradientStop Color="#182F7CF6" Offset="1" />
+      </LinearGradientBrush>
+
+      <x:Double x:Key="TextControlThemeMinHeight">30</x:Double>
+      <x:Double x:Key="ComboBoxThemeMinHeight">30</x:Double>
+      <Thickness x:Key="TextControlThemePadding">10,4</Thickness>
+      <Thickness x:Key="ComboBoxPadding">10,4,0,4</Thickness>
+      <Thickness x:Key="TextControlBorderThemeThickness">1</Thickness>
+      <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
+      <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
+      <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="TextControlBackground" Color="#FF10131A" />
+          <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#FF10131A" />
+          <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FF10131A" />
+          <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="#FF141821" />
+          <SolidColorBrush x:Key="TextControlBorderBrush" Color="#FF252B38" />
+          <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#FF343D4F" />
+          <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#FF2F7CF6" />
+          <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="#FF202531" />
+          <SolidColorBrush x:Key="TextControlForeground" Color="#FFE6E9F0" />
+          <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#FFE6E9F0" />
+          <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#FFE6E9F0" />
+          <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="#FF555E70" />
+          <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#FF646E82" />
+          <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#FF646E82" />
+          <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#FF646E82" />
+          <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled" Color="#FF555E70" />
+
+          <SolidColorBrush x:Key="ComboBoxBackground" Color="#FF10131A" />
+          <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#FF141822" />
+          <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#FF10131A" />
+          <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="#FF141821" />
+          <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#FF252B38" />
+          <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#FF343D4F" />
+          <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#FF2F7CF6" />
+          <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="#FF202531" />
+          <SolidColorBrush x:Key="ComboBoxForeground" Color="#FFE6E9F0" />
+          <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="#FF555E70" />
+          <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#FF1B202C" />
+          <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#FF343D4F" />
+
+          <SolidColorBrush x:Key="AutoCompleteListBackground" Color="#FF1B202C" />
+          <SolidColorBrush x:Key="AutoCompleteListBorderBrush" Color="#FF343D4F" />
+
+          <SolidColorBrush x:Key="CheckBoxBackgroundUnchecked" Color="#FF10131A" />
+          <SolidColorBrush x:Key="CheckBoxBackgroundUncheckedPointerOver" Color="#FF161B26" />
+          <SolidColorBrush x:Key="CheckBoxBorderBrushUnchecked" Color="#FF3E485E" />
+          <SolidColorBrush x:Key="CheckBoxBorderBrushUncheckedPointerOver" Color="#FF478DF8" />
+
+          <SolidColorBrush x:Key="SliderTrackFill" Color="#FF252C3B" />
+          <SolidColorBrush x:Key="SliderTrackFillPointerOver" Color="#FF2F384B" />
+          <SolidColorBrush x:Key="SliderTrackValueFill" Color="#FF2F7CF6" />
+          <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="#FF478DF8" />
+          <SolidColorBrush x:Key="SliderThumbBackground" Color="#FF2F7CF6" />
+          <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#FF478DF8" />
+          <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#FF1E65D6" />
+
+          <SolidColorBrush x:Key="ToolTipBackground" Color="#FF1F2533" />
+          <SolidColorBrush x:Key="ToolTipBorderBrush" Color="#FF343D4F" />
+          <SolidColorBrush x:Key="ToolTipForeground" Color="#FFE6E9F0" />
+
+          <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent" />
+          <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#10FFFFFF" />
+          <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#18FFFFFF" />
+          <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="Transparent" />
+          <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent" />
+          <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="Transparent" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
   <Application.Styles>
-    <Style Selector="TextBlock.label">
-      <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextSecondary}" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Margin" Value="0,0,8,0" />
+    <FluentTheme DensityStyle="Compact" />
+
+    <!-- Surface cards -->
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{StaticResource ColorBgContainer}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorderSecondary}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="14,12" />
     </Style>
-    <Style Selector="atom|Button">
-      <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Margin" Value="0,0,6,0" />
-      <Setter Property="MinWidth" Value="60" />
+
+    <Style Selector="Border.inset">
+      <Setter Property="Background" Value="{StaticResource ColorBgInput}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorderSecondary}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="10,7" />
     </Style>
-    <Style Selector="atom|CheckBox">
-      <Setter Property="Margin" Value="0,0,12,2" />
+
+    <Style Selector="Border.toggle-tile">
+      <Setter Property="Background" Value="{StaticResource ColorBgInput}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorderSecondary}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="9,5" />
+    </Style>
+
+    <Style Selector="Border.status-pill">
+      <Setter Property="Background" Value="{StaticResource ColorOfflineBg}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorOfflineBorder}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="11,4" />
+      <Setter Property="MinHeight" Value="28" />
+    </Style>
+    <Style Selector="Border.status-pill.online">
+      <Setter Property="Background" Value="{StaticResource ColorOnlineBg}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorOnlineBorder}" />
+    </Style>
+    <Style Selector="Border.status-pill TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+    </Style>
+    <Style Selector="Border.status-pill.online TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource ColorOnlineText}" />
+    </Style>
+
+    <!-- Typography helpers -->
+    <Style Selector="TextBlock.section-title">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{StaticResource ColorTextHeading}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
-    <Style Selector="atom|ComboBox">
+
+    <Style Selector="TextBlock.field-label">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
       <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{StaticResource ColorTextMuted}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Buttons -->
+    <Style Selector="Button">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="MinWidth" Value="54" />
+      <Setter Property="Padding" Value="11,0" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Background" Value="{StaticResource ColorBgElevated}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="{StaticResource ColorText}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource ColorBgElevatedHover}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorderHover}" />
+      <Setter Property="Foreground" Value="#FFFFFFFF" />
+    </Style>
+    <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource ColorBgContainer}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorPrimary}" />
+      <Setter Property="Foreground" Value="{StaticResource ColorText}" />
+    </Style>
+    <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource ColorFillTertiary}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorderSecondary}" />
+      <Setter Property="Foreground" Value="{StaticResource ColorTextDisabled}" />
+    </Style>
+
+    <Style Selector="Button.ghost">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorderSecondary}" />
+      <Setter Property="Foreground" Value="{StaticResource ColorTextSecondary}" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#12FFFFFF" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorder}" />
+      <Setter Property="Foreground" Value="#FFFFFFFF" />
+    </Style>
+    <Style Selector="Button.ghost:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#1CFFFFFF" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorderHover}" />
+      <Setter Property="Foreground" Value="#FFFFFFFF" />
+    </Style>
+
+    <Style Selector="Button.compact">
+      <Setter Property="Height" Value="26" />
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="MinWidth" Value="48" />
+      <Setter Property="Padding" Value="9,0" />
+      <Setter Property="FontSize" Value="11.5" />
+    </Style>
+
+    <Style Selector="Button.primary">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Padding" Value="18,0" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Background" Value="{StaticResource ColorPrimary}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorPrimary}" />
+      <Setter Property="Foreground" Value="#FFFFFFFF" />
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource ColorPrimaryHover}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorPrimaryHover}" />
+      <Setter Property="Foreground" Value="#FFFFFFFF" />
+    </Style>
+    <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource ColorPrimaryActive}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorPrimaryActive}" />
+      <Setter Property="Foreground" Value="#FFFFFFFF" />
+    </Style>
+    <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource ColorFillTertiary}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorderSecondary}" />
+      <Setter Property="Foreground" Value="{StaticResource ColorTextDisabled}" />
+    </Style>
+
+    <Style Selector="Button.action-secondary">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Padding" Value="14,0" />
+      <Setter Property="FontSize" Value="12.5" />
+    </Style>
+
+    <Style Selector="Button.danger">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Padding" Value="14,0" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="Background" Value="{StaticResource ColorDangerBg}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorDangerBorder}" />
+      <Setter Property="Foreground" Value="{StaticResource ColorDangerText}" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource ColorDangerBgHover}" />
+      <Setter Property="BorderBrush" Value="#88EF4444" />
+      <Setter Property="Foreground" Value="#FFFFFFFF" />
+    </Style>
+    <Style Selector="Button.danger:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{StaticResource ColorBorderSecondary}" />
+      <Setter Property="Foreground" Value="{StaticResource ColorTextDisabled}" />
+    </Style>
+
+    <Style Selector="Button.icon-addon">
+      <Setter Property="Width" Value="24" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="Height" Value="24" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Margin" Value="0,0,3,0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.icon-addon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.icon-addon:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!-- Inputs & selectors -->
+    <Style Selector="CheckBox">
+      <Setter Property="Height" Value="24" />
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="Padding" Value="7,0,4,0" />
+      <Setter Property="Foreground" Value="{StaticResource ColorText}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="CheckBox /template/ Border#NormalRectangle">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="CornerRadius" Value="4" />
+    </Style>
+
+    <Style Selector="ComboBox">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="10,3" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
-    <Style Selector="atom|LineEdit, atom|AutoComplete, atom|Slider">
+
+    <Style Selector="TextBox">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBox /template/ Border#PART_BorderElement">
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+
+    <Style Selector="TextBox.mono">
+      <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="ComboBox.mono">
+      <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style Selector="AutoCompleteBox">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, monospace" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
-    <Style Selector="atom|ListBoxItem">
-      <Setter Property="MinHeight" Value="22" />
+
+    <Style Selector="Slider">
+      <Setter Property="Height" Value="26" />
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Slider:horizontal">
+      <Setter Property="MinHeight" Value="26" />
+    </Style>
+    <Style Selector="Slider /template/ Grid">
+      <Setter Property="MinHeight" Value="26" />
+    </Style>
+    <Style Selector="Slider /template/ Thumb">
+      <Setter Property="Width" Value="15" />
+      <Setter Property="Height" Value="15" />
+      <Setter Property="Margin" Value="0" />
+    </Style>
+    <Style Selector="Slider:horizontal /template/ Grid#SliderContainer">
+      <Setter Property="MinHeight" Value="24" />
+    </Style>
+    <Style Selector="Slider:horizontal /template/ Track#PART_Track">
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Expander.subtle">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Expander.subtle /template/ ToggleButton#ExpanderHeader">
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="2,0" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="Expander.subtle /template/ Border#ExpanderContent">
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0,6,0,0" />
+    </Style>
+
+    <Style Selector="ProgressBar">
+      <Setter Property="Height" Value="6" />
+      <Setter Property="MinHeight" Value="6" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Background" Value="#FF232938" />
+      <Setter Property="Foreground" Value="{StaticResource ColorPrimary}" />
+    </Style>
+
+    <Style Selector="ListBox.log-list ListBoxItem">
+      <Setter Property="MinHeight" Value="20" />
       <Setter Property="Padding" Value="8,2" />
+      <Setter Property="BorderThickness" Value="0" />
     </Style>
   </Application.Styles>
 </Application>

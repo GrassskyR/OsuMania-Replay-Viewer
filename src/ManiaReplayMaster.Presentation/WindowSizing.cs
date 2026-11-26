@@ -16,8 +16,8 @@ public readonly record struct WindowSizing(double Width, double Height, double M
         var availableHeight = Math.Max(1, height - 24);
         var minWidth = Math.Min(480, availableWidth);
         var minHeight = Math.Min(320, availableHeight);
-        return new WindowSizing(Math.Max(minWidth, Math.Min(900, Math.Min(width * .85, availableWidth))),
-            Math.Max(minHeight, Math.Min(620, Math.Min(height * .88, availableHeight))),
+        return new WindowSizing(Math.Max(minWidth, Math.Min(980, Math.Min(width * .85, availableWidth))),
+            Math.Max(minHeight, Math.Min(690, Math.Min(height * .88, availableHeight))),
             minWidth, minHeight, availableWidth, availableHeight);
     }
 }

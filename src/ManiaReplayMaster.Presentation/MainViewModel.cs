@@ -46,6 +46,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private string _ffmpegPath;
     public string FfmpegPath => _ffmpegPath;
+    public string FfmpegSummary => string.IsNullOrWhiteSpace(_ffmpegPath)
+        ? Text("Ffmpeg.Builtin") : Path.GetFileName(_ffmpegPath);
     public string ResolveFfmpeg() => string.IsNullOrWhiteSpace(_ffmpegPath)
         ? ManiaReplayMaster.Encode.FfmpegLocator.Locate() : _ffmpegPath;
     public bool CanChangeFfmpeg => !IsBusy && !IsCheckingFfmpeg;
@@ -63,7 +65,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private void UseFfmpeg(string path)
     {
-        if (Set(ref _ffmpegPath, path, nameof(FfmpegPath))) _settings.SetFfmpegPath(path);
+        if (Set(ref _ffmpegPath, path, nameof(FfmpegPath)))
+        {
+            _settings.SetFfmpegPath(path);
+            OnPropertyChanged(nameof(FfmpegSummary));
+        }
     }
 
     public void ReplaceAvailableCodecs(IEnumerable<string> codecs)
@@ -191,10 +197,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private bool _gameInitialised;
     private bool _osuRunning;
+    public bool OsuRunning => _osuRunning;
     public string GameStatusText => Text(!_gameInitialised ? "Status.Checking"
         : _osuRunning ? "Status.Running" : "Status.Closed");
 
-    private string _gamePillBrush = "#9AA0AD";
+    private string _gamePillBrush = "#64748B";
     public string GamePillBrush
     {
         get => _gamePillBrush;
@@ -217,10 +224,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Core.Model.Config.Instance.Speed = value;
             _settings.RememberRendering(Core.Model.Config.Instance);
             OnPropertyChanged(nameof(SpeedText));
+            OnPropertyChanged(nameof(SpeedRateHint));
         }
     }
 
     public string SpeedText => _speed.ToString();
+    public string SpeedRateHint => $"{_speed * 60} px/s";
 
     private int _width;
     public int Width
@@ -384,10 +393,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private Func<string> _resultText = () => string.Empty;
     public string ResultText => _resultText();
+    public bool HasResult => !string.IsNullOrWhiteSpace(ResultText);
     public void SetResultText(Func<string> describe)
     {
         _resultText = describe;
         OnPropertyChanged(nameof(ResultText));
+        OnPropertyChanged(nameof(HasResult));
     }
 
     public bool CanRender => !IsBusy && !IsCheckingFfmpeg
@@ -433,8 +444,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private void RefreshGameStatus()
     {
+        var previous = _osuRunning;
         _osuRunning = _game.OsuRunning;
-        GamePillBrush = _osuRunning ? "#79D2A6" : "#9AA0AD";
+        GamePillBrush = _osuRunning ? "#22C55E" : "#64748B";
+        if (previous != _osuRunning) OnPropertyChanged(nameof(OsuRunning));
         OnPropertyChanged(nameof(GameStatusText));
     }
 
@@ -528,6 +541,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(GameStatusText));
         OnPropertyChanged(nameof(ProgressText));
         OnPropertyChanged(nameof(ResultText));
+        OnPropertyChanged(nameof(HasResult));
+        OnPropertyChanged(nameof(FfmpegSummary));
     }
 
     public void Dispose()

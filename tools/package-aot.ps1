@@ -45,13 +45,17 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot identify the build SDK.' }
     ffmpeg_sha256 = (Get-FileHash -LiteralPath (Join-Path $staging 'ffmpeg.exe') -Algorithm SHA256).Hash.ToLowerInvariant()
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $staging 'build-info.json') -Encoding utf8
 
-# Copy the licenses from the exact restored package graph, including native Skia/HarfBuzz/ANGLE
-# notices and the Native AOT runtime. No WindowsDesktop runtime is part of this graph.
+# Copy the licenses from the exact shipped win-x64 runtime package graph, including native
+# Skia/HarfBuzz notices and the Native AOT runtime. Build-only tasks and non-Windows native
+# asset packages are not distributed in this archive.
 $assets = Get-Content (Join-Path $repo 'src/ManiaReplayMaster.Desktop/obj/project.assets.json') -Raw | ConvertFrom-Json
 $folders = @($assets.packageFolders.PSObject.Properties.Name)
 $manifest = [Collections.Generic.List[string]]::new()
 foreach ($library in $assets.libraries.PSObject.Properties) {
     if ($library.Value.type -ne 'package') { continue }
+    $packageId = $library.Name.Split('/')[0]
+    if ($packageId -match '\.NativeAssets\.(Linux|macOS|WebAssembly|Android|iOS|MacCatalyst|Tizen|tvOS)$') { continue }
+    if ($packageId -in @('Avalonia.Angle.Windows.Natives', 'Avalonia.BuildServices', 'Microsoft.DotNet.ILCompiler', 'Microsoft.NET.ILLink.Tasks')) { continue }
     $manifest.Add($library.Name)
     $package = $null
     foreach ($folder in $folders) {
