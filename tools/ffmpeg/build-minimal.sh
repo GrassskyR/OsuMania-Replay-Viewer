@@ -16,35 +16,42 @@ if [[ ! -d lame-3.100 ]]; then tar -xf "$root/downloads/lame-3.100.tar.gz"; fi
 if [[ ! -d ffmpeg-9.0.2 ]]; then tar -xf "$root/downloads/ffmpeg-9.0.2.tar.xz"; fi
 cd "$work/src/x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55"
 if [[ ! -f "$prefix/lib/libx264.a" ]]; then
-    ./configure --prefix="$prefix" --host=x86_64-w64-mingw32 --enable-static --disable-cli --disable-opencl --extra-ldflags=-static
+    ./configure --prefix="$prefix" --host=x86_64-w64-mingw32 --enable-static --disable-cli --disable-opencl \
+        --bit-depth=8 --chroma-format=420 \
+        --extra-cflags="-Os -ffunction-sections -fdata-sections" \
+        --extra-ldflags="-static"
     make -j"$jobs"
     make install
 fi
 cd "$work/src/lame-3.100"
 if [[ ! -f "$prefix/lib/libmp3lame.a" ]]; then
-    ./configure --prefix="$prefix" --host=x86_64-w64-mingw32 --enable-static --disable-shared --disable-frontend --disable-decoder CFLAGS='-O2' LDFLAGS='-static'
+    ./configure --prefix="$prefix" --host=x86_64-w64-mingw32 --enable-static --disable-shared --disable-frontend --disable-decoder \
+        CFLAGS='-Os -ffunction-sections -fdata-sections' LDFLAGS='-static'
     make -j"$jobs"
     make install
 fi
 cd "$work/src/ffmpeg-9.0.2"
 ./configure --prefix="$root/package" --arch=x86_64 --target-os=mingw32 \
-    --enable-gpl --enable-version3 --enable-static --disable-shared --disable-debug \
+    --enable-gpl --enable-version3 --enable-static --disable-shared --disable-debug --enable-small \
     --disable-autodetect --enable-libx264 --enable-libmp3lame --enable-zlib \
-    --pkg-config-flags=--static --extra-cflags="-I$prefix/include" \
-    --extra-ldflags="-L$prefix/lib -static -static-libgcc" \
+    --pkg-config-flags=--static --extra-cflags="-I$prefix/include -Os -ffunction-sections -fdata-sections" \
+    --extra-ldflags="-L$prefix/lib -static -static-libgcc -Wl,--gc-sections" \
     --disable-doc --disable-ffplay --disable-ffprobe --disable-network \
     --disable-hwaccels --disable-d3d11va --disable-d3d12va --disable-dxva2 --disable-vulkan \
+    --disable-protocols --enable-protocol=file,pipe,fd,data,concat \
+    --disable-parsers --enable-parser=h264,aac,mpegaudio,vorbis,opus,flac,png \
     --disable-encoders --enable-encoder=libx264,aac,libmp3lame,wrapped_avframe \
-    --disable-decoders --enable-decoder=wrapped_avframe,pcm_s16le_planar,pcm_s24le_planar,pcm_s32le_planar,png,h264,mp3,mp3float,mp3adu,mp3adufloat,vorbis,opus,flac,aac,aac_fixed,alac,ac3,eac3,ape,wavpack,pcm_alaw,pcm_mulaw,pcm_u8,pcm_s8,pcm_s16le,pcm_s16be,pcm_s24le,pcm_s24be,pcm_s32le,pcm_s32be,pcm_f32le,pcm_f32be,pcm_f64le,pcm_f64be \
+    --disable-decoders --enable-decoder=wrapped_avframe,pcm_s16le_planar,pcm_s24le_planar,pcm_s32le_planar,png,mp3,mp3float,mp3adu,mp3adufloat,vorbis,opus,flac,aac,aac_fixed,alac,ac3,eac3,ape,wavpack,pcm_alaw,pcm_mulaw,pcm_u8,pcm_s8,pcm_s16le,pcm_s16be,pcm_s24le,pcm_s24be,pcm_s32le,pcm_s32be,pcm_f32le,pcm_f32be,pcm_f64le,pcm_f64be \
     --disable-muxers --enable-muxer=mp4,mov,mp3,null \
     --disable-demuxers --enable-demuxer=image2,png_pipe,concat,mov,mp3,wav,ogg,flac,aac,ac3,eac3,ape,wv \
     --disable-indevs --enable-indev=lavfi --disable-outdevs \
     --disable-filters --enable-filter=aformat,anull,anullsrc,aresample,atempo,adelay,color,format,loop,setpts,crop,trim,transpose,concat,scale,null \
     --disable-bsfs --enable-bsf=h264_mp4toannexb,aac_adtstoasc,extract_extradata
 make -j"$jobs"
+rm -rf "$root/package/licenses/ffmpeg"
 mkdir -p "$root/package/licenses/ffmpeg"
 cp ffmpeg.exe "$root/package/ffmpeg.exe"
-strip "$root/package/ffmpeg.exe"
+strip -s "$root/package/ffmpeg.exe"
 cp COPYING.GPLv3 "$root/package/licenses/ffmpeg/FFmpeg-GPL-3.0.txt"
 cp "$work/src/x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55/COPYING" "$root/package/licenses/ffmpeg/x264-COPYING.txt"
 cp "$work/src/lame-3.100/COPYING" "$root/package/licenses/ffmpeg/LAME-COPYING.txt"

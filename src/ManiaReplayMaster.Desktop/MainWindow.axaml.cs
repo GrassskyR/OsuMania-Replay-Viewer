@@ -1,22 +1,18 @@
 using System.Diagnostics;
 using System.IO;
-using AtomUI;
-using AtomUI.Localization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using ManiaReplayMaster.Presentation;
-
 using Avalonia.Threading;
 using ManiaReplayMaster.Core;
 using ManiaReplayMaster.Core.Model;
 using ManiaReplayMaster.Encode;
+using ManiaReplayMaster.Presentation;
 using ManiaReplayMaster.Presentation.Localization;
 using static ManiaReplayMaster.Presentation.Localization.Localizer;
 using PipelineRunner = ManiaReplayMaster.Core.Pipeline.Pipeline;
-using Window = AtomUI.Desktop.Controls.Window;
 
 namespace ManiaReplayMaster.Desktop;
 
@@ -35,6 +31,7 @@ public partial class MainWindow : Window
     private bool _updatingCandidates;
     private (PixelRect WorkArea, double Scaling)? _screenBounds;
     private bool _screenUpdatePending;
+    private bool? _isNarrowLayout;
 
     public MainWindow() : this(new MainViewModel()) { }
 
@@ -44,10 +41,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _vm;
         _vm.LogLines.CollectionChanged += (_, _) => LogBox.ScrollIntoView(_vm.LogLines[^1]);
-        UpdateCodecOptions();
-        _vm.CodecChoices.CollectionChanged += OnCodecChoicesChanged;
-        // Preserve the full encoder menu even when a codec is already entered.
-        CodecBox.Filter = null;
         Closing += OnClosing;
         ApplyScreenBounds(initial: true, center: false);
         Opened += (_, _) =>
@@ -59,8 +52,9 @@ public partial class MainWindow : Window
         ScalingChanged += (_, _) => QueueScreenUpdate();
         Screens.Changed += OnScreensChanged;
         Closed += (_, _) => Screens.Changed -= OnScreensChanged;
-        SizeChanged += (_, _) => Classes.Set("narrow", ClientSize.Width < 560);
+        SizeChanged += (_, _) => UpdateResponsiveLayout();
         LayoutUpdated += (_, _) => UpdateContentHeight();
+        UpdateResponsiveLayout();
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         LanguageBox.SelectedIndex = _vm.L.Preference == "zh-Hans" ? 1 : _vm.L.Preference == "en" ? 2 : 0;
@@ -119,15 +113,43 @@ public partial class MainWindow : Window
             center ? area.Y + (area.Height - pixelHeight) / 2 : Math.Clamp(Position.Y, area.Y, area.Bottom - pixelHeight));
     }
 
+    private void UpdateResponsiveLayout()
+    {
+        var narrow = ClientSize.Width > 0 && ClientSize.Width < 740;
+        if (_isNarrowLayout == narrow) return;
+        _isNarrowLayout = narrow;
+        Classes.Set("narrow", narrow);
+        if (narrow)
+        {
+            WorkspaceGrid.ColumnDefinitions = new ColumnDefinitions("*");
+            WorkspaceGrid.RowDefinitions = new RowDefinitions("Auto,12,*");
+            Grid.SetColumn(LeftColumn, 0);
+            Grid.SetRow(LeftColumn, 0);
+            Grid.SetColumn(RightColumn, 0);
+            Grid.SetRow(RightColumn, 2);
+        }
+        else
+        {
+            WorkspaceGrid.ColumnDefinitions = new ColumnDefinitions("1.15*,14,*");
+            WorkspaceGrid.RowDefinitions = new RowDefinitions("*");
+            Grid.SetColumn(LeftColumn, 0);
+            Grid.SetRow(LeftColumn, 0);
+            Grid.SetColumn(RightColumn, 2);
+            Grid.SetRow(RightColumn, 0);
+        }
+    }
+
     private void UpdateContentHeight()
     {
-        // Give the star-sized log a finite viewport so its own list stays virtualized.
-        // When settings wrap, the outer viewer scrolls while actions stay visible.
-        var height = Math.Max(ContentScroll.Viewport.Height,
-            InputsPanel.DesiredSize.Height + ParametersPanel.DesiredSize.Height
-            + LogPanel.MinHeight + LogPanel.Margin.Top + LogPanel.Margin.Bottom);
-        if (double.IsNaN(ContentGrid.Height) || Math.Abs(ContentGrid.Height - height) > .5)
-            ContentGrid.Height = height;
+        // Give the star-sized log card a finite viewport so LogBox stays virtualized and
+        // both columns align evenly; when stacked or cramped, ContentScroll scrolls smoothly.
+        var leftNeed = InputsCard.DesiredSize.Height + 12 + OsuCardBody.DesiredSize.Height + 26;
+        var rightNeed = ParamsCard.DesiredSize.Height + 12 + LogCard.MinHeight;
+        var contentNeed = _isNarrowLayout == true ? leftNeed + 12 + rightNeed : Math.Max(leftNeed, rightNeed);
+        var marginV = WorkspaceGrid.Margin.Top + WorkspaceGrid.Margin.Bottom;
+        var height = Math.Max(Math.Max(0, ContentScroll.Viewport.Height - marginV), contentNeed);
+        if (double.IsNaN(WorkspaceGrid.Height) || Math.Abs(WorkspaceGrid.Height - height) > .5)
+            WorkspaceGrid.Height = height;
     }
 
     private async void OnDetectTick(object? sender, EventArgs e)
@@ -344,19 +366,10 @@ public partial class MainWindow : Window
         CodecBox.IsDropDownOpen = open;
     }
 
-    private void OnCodecChoicesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        => UpdateCodecOptions();
-
-    private void UpdateCodecOptions()
-        => CodecBox.OptionsSource = _vm.CodecChoices.Select(codec =>
-            new AtomUI.Desktop.Controls.AutoCompleteOption { Header = codec, Content = codec }).ToArray();
-
     private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == "Item[]")
         {
-            var language = Localizer.ResolveLanguage(_vm.L.Preference, System.Globalization.CultureInfo.CurrentUICulture);
-            Application.Current!.GetLanguageManager()!.ChangeLanguage(language == "zh-Hans" ? LanguageTags.ZhCN : LanguageTags.EnUS);
             RefreshCandidateList();
         }
     }
@@ -552,7 +565,6 @@ public partial class MainWindow : Window
         if (_encoderDetection is { } detection) await detection;
         _encoderDetectionCancellation.Dispose();
         Localizer.Current.PropertyChanged -= OnLanguageChanged;
-        _vm.CodecChoices.CollectionChanged -= OnCodecChoicesChanged;
         _vm.Dispose();
         _allowClose = true;
         Dispatcher.UIThread.Post(Close);

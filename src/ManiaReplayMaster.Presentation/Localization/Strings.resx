@@ -108,4 +108,19 @@ Details were written to:
 {1}</value></data>
   <data name="Candidates.Tooltip" xml:space="preserve"><value>Other candidate replays for this beatmap</value></data>
   <data name="Game.InvalidReplay" xml:space="preserve"><value>Unable to read replay metadata.</value></data>
+  <data name="App.Subtitle" xml:space="preserve"><value>osu!mania / Malody replay renderer</value></data>
+  <data name="Section.Inputs" xml:space="preserve"><value>Replay &amp; Beatmap</value></data>
+  <data name="Section.OsuSync" xml:space="preserve"><value>osu! Score Detection</value></data>
+  <data name="Section.VideoParams" xml:space="preserve"><value>Video &amp; Encoding</value></data>
+  <data name="Section.Log" xml:space="preserve"><value>Live Log</value></data>
+  <data name="DropHint" xml:space="preserve"><value>Drop .osr / .mr / .osu / .osz / .mc files anywhere on this window</value></data>
+  <data name="Replay.ShortLabel" xml:space="preserve"><value>Replay</value></data>
+  <data name="Replay.Placeholder" xml:space="preserve"><value>Select or drop a replay file…</value></data>
+  <data name="Beatmap.ShortLabel" xml:space="preserve"><value>Beatmap</value></data>
+  <data name="Beatmap.Placeholder" xml:space="preserve"><value>Auto-located or choose a beatmap…</value></data>
+  <data name="Candidates.Label" xml:space="preserve"><value>Candidate replays</value></data>
+  <data name="Resolution.Label" xml:space="preserve"><value>Resolution (W × H) &amp; FPS</value></data>
+  <data name="Ffmpeg.Section" xml:space="preserve"><value>FFmpeg toolchain</value></data>
+  <data name="AutoSave.Hint" xml:space="preserve"><value>Auto-saved</value></data>
+  <data name="AutoSync.Hint" xml:space="preserve"><value>Auto-sync</value></data>
 </root>

@@ -108,4 +108,19 @@
 {1}</value></data>
   <data name="Candidates.Tooltip" xml:space="preserve"><value>此谱面的其他候选回放</value></data>
   <data name="Game.InvalidReplay" xml:space="preserve"><value>无法读取回放信息。</value></data>
+  <data name="App.Subtitle" xml:space="preserve"><value>osu!mania / Malody 回放渲染工作台</value></data>
+  <data name="Section.Inputs" xml:space="preserve"><value>回放与谱面</value></data>
+  <data name="Section.OsuSync" xml:space="preserve"><value>osu! 成绩检测与候选</value></data>
+  <data name="Section.VideoParams" xml:space="preserve"><value>画面与编码参数</value></data>
+  <data name="Section.Log" xml:space="preserve"><value>实时运行日志</value></data>
+  <data name="DropHint" xml:space="preserve"><value>支持将 .osr / .mr / .osu / .osz / .mc 文件直接拖入窗口</value></data>
+  <data name="Replay.ShortLabel" xml:space="preserve"><value>回放文件</value></data>
+  <data name="Replay.Placeholder" xml:space="preserve"><value>选择或拖入回放文件…</value></data>
+  <data name="Beatmap.ShortLabel" xml:space="preserve"><value>谱面文件</value></data>
+  <data name="Beatmap.Placeholder" xml:space="preserve"><value>自动定位或手动选择谱面…</value></data>
+  <data name="Candidates.Label" xml:space="preserve"><value>同谱面候选回放</value></data>
+  <data name="Resolution.Label" xml:space="preserve"><value>分辨率 (宽 × 高) &amp; 帧率</value></data>
+  <data name="Ffmpeg.Section" xml:space="preserve"><value>FFmpeg 工具链</value></data>
+  <data name="AutoSave.Hint" xml:space="preserve"><value>自动保存偏好</value></data>
+  <data name="AutoSync.Hint" xml:space="preserve"><value>自动同步</value></data>
 </root>

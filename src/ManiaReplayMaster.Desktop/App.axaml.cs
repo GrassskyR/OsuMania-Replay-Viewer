@@ -12,10 +12,6 @@ public partial class App : Application
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
     public override void OnFrameworkInitializationCompleted()
     {
-        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
-        {
-            if (args.ExceptionObject is Exception ex) CrashLog.Write(ex);
-        };
         Dispatcher.UIThread.UnhandledException += (_, args) =>
         {
             CrashLog.Write(args.Exception);

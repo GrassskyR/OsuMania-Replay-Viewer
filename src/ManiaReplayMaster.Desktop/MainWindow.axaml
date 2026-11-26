@@ -1,212 +1,377 @@
-<atom:Window x:Class="ManiaReplayMaster.Desktop.MainWindow"
+<Window x:Class="ManiaReplayMaster.Desktop.MainWindow"
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:atom="https://atomui.net"
         xmlns:vm="using:ManiaReplayMaster.Presentation"
-        xmlns:controls="using:ManiaReplayMaster.Desktop.Controls"
         x:DataType="vm:MainViewModel" x:CompileBindings="True"
-        Title="Mania Replay Viewer" Icon="/Assets/app-icon.ico" Height="620" Width="900"
-        MinHeight="320" MinWidth="480"
+        Title="Mania Replay Viewer" Icon="/Assets/app-icon.ico" Height="690" Width="980"
+        MinHeight="380" MinWidth="480"
         WindowStartupLocation="CenterScreen"
-        FontFamily="{atom:SharedTokenResource FontFamily}" FontSize="{atom:SharedTokenResource FontSize}" UseLayoutRounding="True"
+        FontFamily="Segoe UI, Microsoft YaHei" FontSize="13" UseLayoutRounding="True"
         DragDrop.AllowDrop="True"
-        Background="{atom:SharedTokenResource ColorBgLayout}"
-        Foreground="{atom:SharedTokenResource ColorText}">
+        Background="{StaticResource ColorBgLayout}"
+        Foreground="{StaticResource ColorText}">
 
-  <atom:Window.Styles>
-    <Style Selector="atom|Window.narrow controls|FormRow">
-      <Setter Property="IsStacked" Value="True" />
-    </Style>
-    <Style Selector="atom|AutoComplete#CodecBox /template/ :is(TextBox)#PART_TextBox">
+  <Window.Styles>
+    <Style Selector="AutoCompleteBox#CodecBox /template/ TextBox#PART_TextBox">
       <Setter Property="AutomationProperties.AutomationId" Value="CodecBox" />
     </Style>
-  </atom:Window.Styles>
+  </Window.Styles>
 
-  <Grid Margin="12">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="*" />
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="Auto" />
-    </Grid.RowDefinitions>
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
 
-    <!-- Header + game status -->
-    <WrapPanel Grid.Row="0">
-      <TextBlock Text="Mania Replay Viewer" FontSize="16" FontWeight="Bold" Margin="0,0,16,6" VerticalAlignment="Center" />
-      <WrapPanel VerticalAlignment="Center">
-        <TextBlock Text="{Binding L[Language.Label]}" Classes="label" Margin="0,0,8,0" />
-        <atom:ComboBox x:Name="LanguageBox" AutomationProperties.AutomationId="LanguageBox" Width="120" Margin="0,0,12,6"
-                  SelectedIndex="0"
-                  atom:ToolTip.Tip="{Binding L[Language.Tooltip]}">
-          <atom:ComboBoxItem Tag="auto" Content="{Binding L[Language.System]}" />
-          <atom:ComboBoxItem Tag="zh-Hans" Content="中文" />
-          <atom:ComboBoxItem Tag="en" Content="English" />
-        </atom:ComboBox>
-        <Border Background="{atom:SharedTokenResource ColorFillTertiary}" BorderBrush="{atom:SharedTokenResource ColorBorder}"
-                BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,0,6" MinHeight="28">
-          <StackPanel Orientation="Horizontal">
-            <Ellipse Width="7" Height="7" Fill="{Binding GamePillBrush}" Margin="0,0,7,0" VerticalAlignment="Center" />
-            <TextBlock x:Name="GameStatusLabel" AutomationProperties.AutomationId="GameStatusLabel" Text="{Binding GameStatusText}" FontSize="12" VerticalAlignment="Center" />
+    <!-- Top header bar -->
+    <Border Grid.Row="0" Background="{StaticResource ColorBgChrome}"
+            BorderBrush="{StaticResource ColorBorderSecondary}" BorderThickness="0,0,0,1"
+            Padding="16,9">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
+          <!-- Brand icon matching app-icon.svg -->
+          <Border Width="30" Height="30" CornerRadius="8" Background="{StaticResource BrandIconGradient}"
+                  BorderBrush="#29FFFFFF" BorderThickness="1" VerticalAlignment="Center">
+            <Viewbox Width="18" Height="18" Stretch="Uniform">
+              <Path Data="M 0 112 V 0 H 30 L 66 62 L 102 0 H 132 V 112 H 105 V 45 L 74 96 H 58 L 27 45 V 112 Z"
+                    Fill="#FFFFFFFF" />
+            </Viewbox>
+          </Border>
+          <StackPanel VerticalAlignment="Center" Spacing="1">
+            <TextBlock Text="Mania Replay Viewer" FontSize="14.5" FontWeight="Bold" Foreground="#FFFFFFFF" />
+            <TextBlock Text="{Binding L[App.Subtitle]}" FontSize="11" Foreground="{StaticResource ColorTextMuted}"
+                       TextTrimming="CharacterEllipsis" />
           </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Border Classes="status-pill" Classes.online="{Binding OsuRunning}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <Ellipse Width="7" Height="7" Fill="{Binding GamePillBrush}" VerticalAlignment="Center" />
+              <TextBlock x:Name="GameStatusLabel" AutomationProperties.AutomationId="GameStatusLabel"
+                         Text="{Binding GameStatusText}" FontSize="12" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+          <ComboBox x:Name="LanguageBox" AutomationProperties.AutomationId="LanguageBox" Width="108"
+                    Height="28" MinHeight="28" FontSize="12"
+                    SelectedIndex="0"
+                    ToolTip.Tip="{Binding L[Language.Tooltip]}">
+            <ComboBoxItem Tag="auto" Content="{Binding L[Language.System]}" />
+            <ComboBoxItem Tag="zh-Hans" Content="中文" />
+            <ComboBoxItem Tag="en" Content="English" />
+          </ComboBox>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Full-width result summary banner (visible only when a result exists) -->
+    <Border Grid.Row="1" IsVisible="{Binding HasResult}" Margin="18,12,18,0"
+            Background="{StaticResource ResultBannerGradient}"
+            BorderBrush="{StaticResource ColorOnlineBorder}" BorderThickness="1"
+            CornerRadius="9" Padding="13,8">
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+        <Border Grid.Column="0" Background="{StaticResource ColorOnlineBg}" CornerRadius="5" Padding="7,2"
+                VerticalAlignment="Center">
+          <TextBlock Text="✓" FontSize="11.5" FontWeight="Bold" Foreground="{StaticResource ColorOnlineText}" />
         </Border>
-      </WrapPanel>
-    </WrapPanel>
+        <TextBlock x:Name="ResultText" Grid.Column="1" AutomationProperties.AutomationId="ResultText"
+                   Text="{Binding ResultText}" ToolTip.Tip="{Binding ResultText}"
+                   FontSize="12.5" FontWeight="SemiBold" Foreground="#FFEAFBF0"
+                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
 
-    <atom:ScrollViewer x:Name="ContentScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled">
-      <Grid x:Name="ContentGrid">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <!-- Main two-column workspace (Scheme A1) -->
+    <ScrollViewer x:Name="ContentScroll" Grid.Row="2"
+                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <Grid x:Name="WorkspaceGrid" Margin="16,12,16,12" ColumnDefinitions="1.15*,14,*">
 
-        <!-- Inputs -->
-        <Border x:Name="InputsPanel" Grid.Row="0" Background="{atom:SharedTokenResource ColorBgContainer}" BorderBrush="{atom:SharedTokenResource ColorBorderSecondary}"
-                BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,4,0,0">
-          <StackPanel Spacing="8">
-            <controls:FormRow>
-              <TextBlock Text="{Binding L[Replay.Label]}" Classes="label" />
-              <atom:LineEdit x:Name="ReplayBox" AutomationProperties.AutomationId="ReplayBox"
-                       Margin="0,0,6,0" Text="{Binding ReplayPath, Mode=TwoWay}" atom:ToolTip.Tip="{Binding ReplayPath}" />
-              <StackPanel Orientation="Horizontal">
-                <atom:Button x:Name="BrowseReplayButton" AutomationProperties.AutomationId="BrowseReplayButton" Content="{Binding L[Browse]}" Click="OnBrowseReplay" />
-                <atom:Button AutomationProperties.AutomationId="LocateButton" Content="{Binding L[Locate]}" Click="OnLocateFromReplay" Margin="0"
-                        atom:ToolTip.Tip="{Binding L[Locate.Tooltip]}" />
-              </StackPanel>
-            </controls:FormRow>
-            <controls:FormRow>
-              <TextBlock Text="{Binding L[Beatmap.Label]}" Classes="label" />
-              <atom:LineEdit x:Name="BeatmapBox" AutomationProperties.AutomationId="BeatmapBox"
-                       Margin="0,0,6,0" Text="{Binding BeatmapPath, Mode=TwoWay}" atom:ToolTip.Tip="{Binding BeatmapPath}" />
-              <StackPanel Orientation="Horizontal">
-                <atom:Button x:Name="BrowseBeatmapButton" AutomationProperties.AutomationId="BrowseBeatmapButton" Content="{Binding L[Browse]}" Click="OnBrowseBeatmap" />
-                <atom:Button AutomationProperties.AutomationId="SwapButton" Content="{Binding L[Swap]}" Click="OnSwapPaths" Margin="0"
-                        atom:ToolTip.Tip="{Binding L[Swap.Tooltip]}" />
-              </StackPanel>
-            </controls:FormRow>
-            <controls:FormRow StackActions="True">
-              <TextBlock Text="{Binding L[DetectedScore.Label]}" Classes="label" />
-              <TextBlock Text="{Binding DetectedScoreText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                         atom:ToolTip.Tip="{Binding DetectedScoreText}" />
-              <atom:ComboBox x:Name="ScoreCandidateBox" AutomationProperties.AutomationId="ScoreCandidateBox"
-                        MinWidth="0" HorizontalAlignment="Stretch"
-                        SelectionChanged="OnCandidateSelected" atom:ToolTip.Tip="{Binding L[Candidates.Tooltip]}">
-                <atom:ComboBox.ItemTemplate><DataTemplate x:DataType="vm:CandidateItem"><TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis" /></DataTemplate></atom:ComboBox.ItemTemplate>
-              </atom:ComboBox>
-            </controls:FormRow>
+        <!-- Left column: Inputs + osu! detection -->
+        <Grid x:Name="LeftColumn" Grid.Column="0" Grid.Row="0" RowDefinitions="Auto,12,*">
 
-            <WrapPanel Margin="0,2,0,0">
-              <atom:CheckBox x:Name="AutoDetectToggle" AutomationProperties.AutomationId="AutoDetectToggle" Content="{Binding L[AutoDetect]}" IsChecked="{Binding AutoDetectFromGame, Mode=TwoWay}"
-                        atom:ToolTip.Tip="{Binding L[AutoDetect.Tooltip]}" />
-              <atom:CheckBox Content="{Binding L[AutoStart]}" IsChecked="{Binding AutoStartRender, Mode=TwoWay}"
-                        atom:ToolTip.Tip="{Binding L[AutoStart.Tooltip]}" />
-              <atom:CheckBox Content="{Binding L[ReadMemory]}" IsChecked="{Binding MemoryEnabled, Mode=TwoWay}"
-                        atom:ToolTip.Tip="{Binding L[ReadMemory.Tooltip]}" />
-              <atom:CheckBox Content="{Binding L[DebugLogging]}" IsChecked="{Binding DebugLogging, Mode=TwoWay}" />
-            </WrapPanel>
-          </StackPanel>
-        </Border>
+          <!-- Card 1: Replay & Beatmap -->
+          <Border x:Name="InputsCard" Grid.Row="0" Classes="card">
+            <StackPanel Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <Path Data="M 3 1 H 9 L 13 5 V 13 H 3 Z M 9 1 V 5 H 13"
+                        Stroke="{StaticResource ColorPrimaryText}" StrokeThickness="1.3"
+                        Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding L[Section.Inputs]}" Classes="section-title" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="ghost compact"
+                        AutomationProperties.AutomationId="SwapButton"
+                        Content="{Binding L[Swap]}" Click="OnSwapPaths"
+                        ToolTip.Tip="{Binding L[Swap.Tooltip]}" />
+              </Grid>
 
-        <!-- Parameters -->
-        <Border x:Name="ParametersPanel" Grid.Row="1" Background="{atom:SharedTokenResource ColorBgContainer}" BorderBrush="{atom:SharedTokenResource ColorBorderSecondary}"
-                BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,8,0,0">
-          <StackPanel Spacing="8">
-            <controls:AdaptiveGrid x:Name="ParameterFields">
-              <Grid ColumnDefinitions="76,*">
-                <TextBlock Text="{Binding L[Speed]}" Classes="label" />
-                <Grid Grid.Column="1"><atom:Slider Margin="0,0,32,0" x:Name="SpeedSlider" AutomationProperties.AutomationId="SpeedSlider" Minimum="1" Maximum="100"
-                        IsSnapToTickEnabled="True" TickFrequency="1" atom:ToolTip.Tip="{Binding L[Speed.Tooltip]}"
-                        Value="{Binding Speed, Mode=TwoWay}" />
-                  <TextBlock Text="{Binding Speed}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid>
-              </Grid>
-              <Grid ColumnDefinitions="76,*">
-                <TextBlock Text="{Binding L[Width]}" Classes="label" />
-                <Grid Grid.Column="1"><atom:LineEdit x:Name="WidthBox" AutomationProperties.AutomationId="WidthBox" Text="{Binding Width, Mode=TwoWay}" /></Grid>
-              </Grid>
-              <Grid ColumnDefinitions="76,*">
-                <TextBlock Text="{Binding L[Height]}" Classes="label" />
-                <Grid Grid.Column="1"><atom:LineEdit x:Name="HeightBox" AutomationProperties.AutomationId="HeightBox" Text="{Binding Height, Mode=TwoWay}" /></Grid>
-              </Grid>
-              <Grid ColumnDefinitions="76,*">
-                <TextBlock Text="{Binding L[FPS]}" Classes="label" />
-                <Grid Grid.Column="1"><atom:LineEdit x:Name="FpsBox" AutomationProperties.AutomationId="FpsBox"
-                       Text="{Binding FramePerSecond, Mode=TwoWay}" /></Grid>
-              </Grid>
-              <Grid ColumnDefinitions="76,*">
-                <TextBlock Text="{Binding L[Codec]}" Classes="label" />
-                <Grid Grid.Column="1">
-                <atom:AutoComplete x:Name="CodecBox" MinWidth="0"
-                        MinimumPrefixLength="0" IsCompletionEnabled="False"
-                        atom:ToolTip.Tip="{Binding L[Codec.Tooltip]}" Value="{Binding Codec, Mode=TwoWay}">
-                  <atom:AutoComplete.ContentRightAddOn>
-                    <atom:Button AutomationProperties.AutomationId="CodecDropDownButton" AutomationProperties.Name="{Binding L[Codec]}"
-                                 ButtonType="Text" Width="22" MinWidth="0" Height="22" MinHeight="0" Margin="0" Padding="0"
-                                 Focusable="False" Click="OnCodecDropDown" atom:ToolTip.Tip="{Binding L[Codec.Tooltip]}">
-                      <Path Data="M 0 0 L 4 4 L 8 0" Stroke="{atom:SharedTokenResource ColorTextSecondary}" StrokeThickness="1.5"
-                            Width="8" Height="4" />
-                    </atom:Button>
-                  </atom:AutoComplete.ContentRightAddOn>
-                </atom:AutoComplete>
+              <Border Background="{StaticResource ColorDropBg}" BorderBrush="{StaticResource ColorDropBorder}"
+                      BorderThickness="1" CornerRadius="7" Padding="10,7">
+                <TextBlock Text="{Binding L[DropHint]}" FontSize="11.5"
+                           Foreground="{StaticResource ColorDropText}" TextTrimming="CharacterEllipsis" />
+              </Border>
+
+              <!-- Replay path -->
+              <StackPanel Spacing="5">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="{Binding L[Replay.ShortLabel]}" Classes="field-label" />
+                  <TextBlock Grid.Column="1" Text=".osr / .mr" Classes="hint" />
                 </Grid>
-              </Grid>
-              <Grid ColumnDefinitions="76,*">
-                <TextBlock Text="{Binding L[Preset]}" Classes="label" />
-                <Grid Grid.Column="1"><atom:ComboBox HorizontalAlignment="Stretch" x:Name="PresetBox" AutomationProperties.AutomationId="PresetBox"
-                        ItemsSource="{Binding PresetChoices}" IsEnabled="{Binding CanSelectPreset}"
-                        atom:ToolTip.Tip="{Binding L[Preset.Tooltip]}"
-                        SelectedItem="{Binding CodecPreset, Mode=TwoWay}" /></Grid>
-              </Grid>
-            </controls:AdaptiveGrid>
-            <controls:FormRow>
-              <TextBlock Text="{Binding L[Output]}" Classes="label" />
-              <atom:LineEdit x:Name="OutputBox" AutomationProperties.AutomationId="OutputBox" Margin="0,0,6,0" Text="{Binding OutputDir, Mode=TwoWay}" atom:ToolTip.Tip="{Binding OutputDir}" />
-              <StackPanel Orientation="Horizontal">
-                <atom:Button AutomationProperties.AutomationId="OpenOutputButton" Content="{Binding L[OpenOutput]}" Click="OnOpenOutputDir" Margin="0" />
+                <Grid ColumnDefinitions="*,6,Auto,6,Auto">
+                  <TextBox Grid.Column="0" x:Name="ReplayBox" AutomationProperties.AutomationId="ReplayBox"
+                           Text="{Binding ReplayPath, Mode=TwoWay}" ToolTip.Tip="{Binding ReplayPath}"
+                           PlaceholderText="{Binding L[Replay.Placeholder]}" />
+                  <Button Grid.Column="2" x:Name="BrowseReplayButton" AutomationProperties.AutomationId="BrowseReplayButton"
+                          Content="{Binding L[Browse]}" Click="OnBrowseReplay" />
+                  <Button Grid.Column="4" Classes="ghost" AutomationProperties.AutomationId="LocateButton"
+                          Content="{Binding L[Locate]}" Click="OnLocateFromReplay"
+                          ToolTip.Tip="{Binding L[Locate.Tooltip]}" />
+                </Grid>
               </StackPanel>
-            </controls:FormRow>
-            <controls:FormRow>
-              <TextBlock Text="FFmpeg" Classes="label" />
-              <atom:LineEdit x:Name="FfmpegPathBox" AutomationProperties.AutomationId="FfmpegPathBox" IsReadOnly="True"
-                       Margin="0,0,6,0" Text="{Binding FfmpegPath}" PlaceholderText="{Binding L[Ffmpeg.Builtin]}" atom:ToolTip.Tip="{Binding L[Ffmpeg.Tooltip]}" />
-              <StackPanel Orientation="Horizontal" IsEnabled="{Binding CanChangeFfmpeg}">
-                <atom:Button AutomationProperties.AutomationId="BrowseFfmpegButton" Content="{Binding L[Browse]}" Click="OnBrowseFfmpeg" />
-                <atom:Button AutomationProperties.AutomationId="ResetFfmpegButton" Content="{Binding L[Ffmpeg.Reset]}" Click="OnResetFfmpeg" Margin="0" />
-              </StackPanel>
-            </controls:FormRow>
-          </StackPanel>
-        </Border>
 
-        <!-- Log -->
-        <Border x:Name="LogPanel" Grid.Row="2" MinHeight="96" Background="{atom:SharedTokenResource ColorBgContainer}" BorderBrush="{atom:SharedTokenResource ColorBorderSecondary}"
-                BorderThickness="1" CornerRadius="6" Margin="0,8,0,0">
-          <atom:ListBox x:Name="LogBox" AutomationProperties.AutomationId="LogBox" Background="Transparent" BorderThickness="0" Foreground="{atom:SharedTokenResource ColorTextSecondary}"
-                   FontFamily="Consolas" FontSize="12"
-                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                   ItemsSource="{Binding LogLines}" />
-        </Border>
+              <!-- Beatmap path -->
+              <StackPanel Spacing="5">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="{Binding L[Beatmap.ShortLabel]}" Classes="field-label" />
+                  <TextBlock Grid.Column="1" Text=".osu / .osz / .mc" Classes="hint" />
+                </Grid>
+                <Grid ColumnDefinitions="*,6,Auto">
+                  <TextBox Grid.Column="0" x:Name="BeatmapBox" AutomationProperties.AutomationId="BeatmapBox"
+                           Text="{Binding BeatmapPath, Mode=TwoWay}" ToolTip.Tip="{Binding BeatmapPath}"
+                           PlaceholderText="{Binding L[Beatmap.Placeholder]}" />
+                  <Button Grid.Column="2" x:Name="BrowseBeatmapButton" AutomationProperties.AutomationId="BrowseBeatmapButton"
+                          Content="{Binding L[Browse]}" Click="OnBrowseBeatmap" />
+                </Grid>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- Card 2: osu! score detection & toggles -->
+          <Border x:Name="OsuCard" Grid.Row="2" Classes="card">
+            <StackPanel x:Name="OsuCardBody" Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <Path Data="M 7 1 A 6 6 0 1 0 7 13 A 6 6 0 1 0 7 1 Z M 7 3.5 V 7 L 9.5 8.5"
+                        Stroke="{StaticResource ColorPrimaryText}" StrokeThickness="1.3"
+                        Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding L[Section.OsuSync]}" Classes="section-title" />
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding L[AutoSync.Hint]}" Classes="hint" />
+              </Grid>
+
+              <Border Classes="inset">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding L[DetectedScore.Label]}" FontSize="11"
+                             Foreground="{StaticResource ColorTextMuted}" />
+                  <TextBlock Text="{Binding DetectedScoreText}" ToolTip.Tip="{Binding DetectedScoreText}"
+                             FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource ColorText}"
+                             TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Border>
+
+              <StackPanel Spacing="5">
+                <TextBlock Text="{Binding L[Candidates.Label]}" Classes="field-label" />
+                <ComboBox x:Name="ScoreCandidateBox" AutomationProperties.AutomationId="ScoreCandidateBox"
+                          MinWidth="0" HorizontalAlignment="Stretch"
+                          SelectionChanged="OnCandidateSelected" ToolTip.Tip="{Binding L[Candidates.Tooltip]}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CandidateItem">
+                      <TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+
+              <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto">
+                <Border Grid.Row="0" Grid.Column="0" Classes="toggle-tile">
+                  <CheckBox x:Name="AutoDetectToggle" AutomationProperties.AutomationId="AutoDetectToggle"
+                            Content="{Binding L[AutoDetect]}" IsChecked="{Binding AutoDetectFromGame, Mode=TwoWay}"
+                            ToolTip.Tip="{Binding L[AutoDetect.Tooltip]}" HorizontalAlignment="Stretch" />
+                </Border>
+                <Border Grid.Row="0" Grid.Column="2" Classes="toggle-tile">
+                  <CheckBox Content="{Binding L[ReadMemory]}" IsChecked="{Binding MemoryEnabled, Mode=TwoWay}"
+                            ToolTip.Tip="{Binding L[ReadMemory.Tooltip]}" HorizontalAlignment="Stretch" />
+                </Border>
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Classes="toggle-tile">
+                  <CheckBox Content="{Binding L[AutoStart]}" IsChecked="{Binding AutoStartRender, Mode=TwoWay}"
+                            ToolTip.Tip="{Binding L[AutoStart.Tooltip]}" HorizontalAlignment="Stretch" />
+                </Border>
+              </Grid>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <!-- Right column: Video & encoding parameters + Live log -->
+        <Grid x:Name="RightColumn" Grid.Column="2" Grid.Row="0" RowDefinitions="Auto,12,*">
+
+          <!-- Card 3: Video & Encoding Parameters -->
+          <Border x:Name="ParamsCard" Grid.Row="0" Classes="card">
+            <StackPanel Spacing="9">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <Path Data="M 2 12 V 8 M 2 5 V 1 M 7 12 V 6 M 7 3 V 1 M 12 12 V 9 M 12 6 V 1 M 0.5 6.5 H 3.5 M 5.5 4.5 H 8.5 M 10.5 7.5 H 13.5"
+                        Stroke="{StaticResource ColorPrimaryText}" StrokeThickness="1.3"
+                        Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding L[Section.VideoParams]}" Classes="section-title" />
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding L[AutoSave.Hint]}" Classes="hint" />
+              </Grid>
+
+              <!-- Scroll speed -->
+              <StackPanel Spacing="2">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding L[Speed]}" Classes="field-label" />
+                    <TextBlock Text="{Binding SpeedRateHint}" Classes="hint" />
+                  </StackPanel>
+                  <Border Grid.Column="1" Background="{StaticResource ColorPrimarySoft}"
+                          CornerRadius="5" Padding="8,2">
+                    <TextBlock Text="{Binding SpeedText}" FontFamily="Consolas" FontSize="12"
+                               FontWeight="Bold" Foreground="{StaticResource ColorPrimaryText}" />
+                  </Border>
+                </Grid>
+                <Slider x:Name="SpeedSlider" AutomationProperties.AutomationId="SpeedSlider"
+                        Minimum="1" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1"
+                        ToolTip.Tip="{Binding L[Speed.Tooltip]}"
+                        Value="{Binding Speed, Mode=TwoWay}" />
+              </StackPanel>
+
+              <!-- Resolution (W x H) + FPS -->
+              <StackPanel Spacing="5">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="{Binding L[Resolution.Label]}" Classes="field-label" />
+                  <TextBlock Grid.Column="1" Text="{Binding L[FPS]}" Classes="hint" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto,*,10,0.85*">
+                  <TextBox Grid.Column="0" x:Name="WidthBox" Classes="mono" AutomationProperties.AutomationId="WidthBox"
+                           Text="{Binding Width, Mode=TwoWay}" ToolTip.Tip="{Binding L[Width]}" />
+                  <TextBlock Grid.Column="1" Text="×" Margin="6,0" Foreground="{StaticResource ColorTextMuted}"
+                             VerticalAlignment="Center" />
+                  <TextBox Grid.Column="2" x:Name="HeightBox" Classes="mono" AutomationProperties.AutomationId="HeightBox"
+                           Text="{Binding Height, Mode=TwoWay}" ToolTip.Tip="{Binding L[Height]}" />
+                  <TextBox Grid.Column="4" x:Name="FpsBox" Classes="mono" AutomationProperties.AutomationId="FpsBox"
+                           Text="{Binding FramePerSecond, Mode=TwoWay}" ToolTip.Tip="{Binding L[FPS]}" />
+                </Grid>
+              </StackPanel>
+
+              <!-- Codec + Preset -->
+              <Grid ColumnDefinitions="*,10,*">
+                <StackPanel Grid.Column="0" Spacing="5">
+                  <TextBlock Text="{Binding L[Codec]}" Classes="field-label" />
+                  <Grid>
+                    <AutoCompleteBox x:Name="CodecBox" MinWidth="0" HorizontalAlignment="Stretch"
+                                     Padding="10,4,26,4" MinimumPrefixLength="0" FilterMode="None"
+                                     IsTextCompletionEnabled="False" ItemsSource="{Binding CodecChoices}"
+                                     ToolTip.Tip="{Binding L[Codec.Tooltip]}" Text="{Binding Codec, Mode=TwoWay}" />
+                    <Button Classes="icon-addon" AutomationProperties.AutomationId="CodecDropDownButton"
+                            AutomationProperties.Name="{Binding L[Codec]}"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" Focusable="False"
+                            Click="OnCodecDropDown" ToolTip.Tip="{Binding L[Codec.Tooltip]}">
+                      <Path Data="M 0 0 L 4 4 L 8 0" Stroke="{StaticResource ColorTextSecondary}"
+                            StrokeThickness="1.5" Width="8" Height="4" />
+                    </Button>
+                  </Grid>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5">
+                  <TextBlock Text="{Binding L[Preset]}" Classes="field-label" />
+                  <ComboBox x:Name="PresetBox" Classes="mono" HorizontalAlignment="Stretch"
+                            AutomationProperties.AutomationId="PresetBox"
+                            ItemsSource="{Binding PresetChoices}" IsEnabled="{Binding CanSelectPreset}"
+                            ToolTip.Tip="{Binding L[Preset.Tooltip]}"
+                            SelectedItem="{Binding CodecPreset, Mode=TwoWay}" />
+                </StackPanel>
+              </Grid>
+
+              <Border Height="1" Background="{StaticResource ColorBorderSecondary}" Margin="0,1" />
+
+              <!-- Output directory -->
+              <StackPanel Spacing="5">
+                <TextBlock Text="{Binding L[Output]}" Classes="field-label" />
+                <Grid ColumnDefinitions="*,6,Auto">
+                  <TextBox Grid.Column="0" x:Name="OutputBox" Classes="mono" AutomationProperties.AutomationId="OutputBox"
+                           Text="{Binding OutputDir, Mode=TwoWay}" ToolTip.Tip="{Binding OutputDir}" />
+                  <Button Grid.Column="2" AutomationProperties.AutomationId="OpenOutputButton"
+                          Content="{Binding L[OpenOutput]}" Click="OnOpenOutputDir" />
+                </Grid>
+              </StackPanel>
+
+              <!-- Low-frequency FFmpeg toolchain expander -->
+              <Expander x:Name="FfmpegExpander" Classes="subtle" ExpandDirection="Down"
+                        ToolTip.Tip="{Binding L[Ffmpeg.Tooltip]}">
+                <Expander.Header>
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Text="{Binding L[Ffmpeg.Section]}" FontSize="12"
+                               Foreground="{StaticResource ColorTextSecondary}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding FfmpegSummary}" FontSize="11.5"
+                               Foreground="{StaticResource ColorTextMuted}" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                </Expander.Header>
+                <Grid ColumnDefinitions="*,6,Auto,6,Auto">
+                  <TextBox Grid.Column="0" x:Name="FfmpegPathBox" AutomationProperties.AutomationId="FfmpegPathBox"
+                           IsReadOnly="True" Text="{Binding FfmpegPath}"
+                           PlaceholderText="{Binding L[Ffmpeg.Builtin]}" ToolTip.Tip="{Binding L[Ffmpeg.Tooltip]}" />
+                  <Button Grid.Column="2" AutomationProperties.AutomationId="BrowseFfmpegButton"
+                          Content="{Binding L[Browse]}" Click="OnBrowseFfmpeg" IsEnabled="{Binding CanChangeFfmpeg}" />
+                  <Button Grid.Column="4" Classes="ghost" AutomationProperties.AutomationId="ResetFfmpegButton"
+                          Content="{Binding L[Ffmpeg.Reset]}" Click="OnResetFfmpeg" IsEnabled="{Binding CanChangeFfmpeg}" />
+                </Grid>
+              </Expander>
+            </StackPanel>
+          </Border>
+
+          <!-- Card 4: Live Log (fills remaining right column height naturally) -->
+          <Border x:Name="LogCard" Grid.Row="2" Classes="card" MinHeight="128">
+            <Grid RowDefinitions="Auto,8,*">
+              <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                  <Path Data="M 1 3 L 5 7 L 1 11 M 7 11 H 13"
+                        Stroke="{StaticResource ColorPrimaryText}" StrokeThickness="1.4"
+                        Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding L[Section.Log]}" Classes="section-title" />
+                </StackPanel>
+                <CheckBox Grid.Column="1" Content="{Binding L[DebugLogging]}"
+                          IsChecked="{Binding DebugLogging, Mode=TwoWay}"
+                          FontSize="11.5" Foreground="{StaticResource ColorTextSecondary}" />
+              </Grid>
+
+              <Border Grid.Row="2" Background="{StaticResource ColorBgLog}"
+                      BorderBrush="{StaticResource ColorBorderSecondary}" BorderThickness="1"
+                      CornerRadius="8" Padding="2,4">
+                <ListBox x:Name="LogBox" Classes="log-list" AutomationProperties.AutomationId="LogBox"
+                         Background="Transparent" BorderThickness="0"
+                         Foreground="{StaticResource ColorTextSecondary}"
+                         FontFamily="Consolas, Cascadia Mono, monospace" FontSize="11.5"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ItemsSource="{Binding LogLines}" />
+              </Border>
+            </Grid>
+          </Border>
+        </Grid>
 
       </Grid>
-    </atom:ScrollViewer>
+    </ScrollViewer>
 
-    <!-- Progress -->
-    <Grid Grid.Row="2" Margin="0,8,0,0">
-      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-      <atom:ProgressBar Grid.Column="0" IndicatorThickness="6" IsProgressInfoVisible="False" Minimum="0" Maximum="100" Value="{Binding Progress}" />
-      <TextBlock Grid.Row="1" Margin="0,4,0,0" VerticalAlignment="Center"
-                 Text="{Binding ProgressText}" TextTrimming="CharacterEllipsis" atom:ToolTip.Tip="{Binding ProgressText}" />
-    </Grid>
+    <!-- Bottom unified progress & action footer -->
+    <Border Grid.Row="3" Background="{StaticResource ColorBgFooter}"
+            BorderBrush="{StaticResource ColorBorderSecondary}" BorderThickness="0,1,0,0"
+            Padding="16,10">
+      <Grid ColumnDefinitions="*,18,Auto">
+        <StackPanel Grid.Column="0" Spacing="6" VerticalAlignment="Center">
+          <TextBlock Text="{Binding ProgressText}" ToolTip.Tip="{Binding ProgressText}"
+                     FontSize="12" Foreground="{StaticResource ColorTextSecondary}"
+                     TextTrimming="CharacterEllipsis" />
+          <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" />
+        </StackPanel>
 
-    <!-- Actions -->
-    <Grid Grid.Row="3" RowDefinitions="Auto,Auto" Margin="0,8,0,0">
-      <WrapPanel>
-      <atom:Button x:Name="RenderButton" ButtonType="Primary" AutomationProperties.AutomationId="RenderButton" Content="{Binding L[Render]}" Click="OnRender" IsEnabled="{Binding CanRender}" FontWeight="SemiBold" />
-      <atom:Button x:Name="JudgeOnlyButton" AutomationProperties.AutomationId="JudgeOnlyButton" Content="{Binding L[JudgeOnly]}" Click="OnJudgeOnly" IsEnabled="{Binding CanRender}"
-              atom:ToolTip.Tip="{Binding L[JudgeOnly.Tooltip]}" />
-      <atom:Button x:Name="CancelButton" AutomationProperties.AutomationId="CancelButton" Content="{Binding L[Cancel]}" Click="OnCancel" IsEnabled="{Binding IsBusy}" />
-      </WrapPanel>
-      <TextBlock x:Name="ResultText" AutomationProperties.AutomationId="ResultText" Grid.Row="1" VerticalAlignment="Center" Margin="0,4,0,0"
-                 Text="{Binding ResultText}" TextTrimming="CharacterEllipsis" />
-    </Grid>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button x:Name="CancelButton" Classes="danger" AutomationProperties.AutomationId="CancelButton"
+                  Content="{Binding L[Cancel]}" Click="OnCancel" IsEnabled="{Binding IsBusy}" />
+          <Button x:Name="JudgeOnlyButton" Classes="ghost action-secondary"
+                  AutomationProperties.AutomationId="JudgeOnlyButton"
+                  Content="{Binding L[JudgeOnly]}" Click="OnJudgeOnly" IsEnabled="{Binding CanRender}"
+                  ToolTip.Tip="{Binding L[JudgeOnly.Tooltip]}" />
+          <Button x:Name="RenderButton" Classes="primary" AutomationProperties.AutomationId="RenderButton"
+                  Content="{Binding L[Render]}" Click="OnRender" IsEnabled="{Binding CanRender}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
   </Grid>
-</atom:Window>
+</Window>

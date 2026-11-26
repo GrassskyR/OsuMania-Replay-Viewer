@@ -8,21 +8,32 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <IsAotCompatible>true</IsAotCompatible>
     <OptimizationPreference>Size</OptimizationPreference>
+    <EventSourceSupport>false</EventSourceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <MetricsSupport>false</MetricsSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <XmlResolverIsNetworkingEnabledByDefault>false</XmlResolverIsNetworkingEnabledByDefault>
+    <DebuggerSupport Condition="'$(PublishAot)' == 'true'">false</DebuggerSupport>
     <CopyOutputSymbolsToPublishDirectory Condition="'$(PublishAot)' == 'true'">false</CopyOutputSymbolsToPublishDirectory>
     <SatelliteResourceLanguages>en;zh-Hans</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/app-icon.ico" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
-    <PackageReference Include="AtomUI.Desktop.Controls" Version="6.2.13" />
+    <PackageReference Include="Avalonia" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Win32" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Skia" Version="12.1.5" />
+    <PackageReference Include="Avalonia.HarfBuzz" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Angle.Windows.Natives" Version="2.1.27548.20260419" ExcludeAssets="all" PrivateAssets="all" />
     <ProjectReference Include="../ManiaReplayMaster.Presentation/ManiaReplayMaster.Presentation.csproj" />
     <ProjectReference Include="../ManiaReplayMaster.Render/ManiaReplayMaster.Render.csproj" />
     <Content Include="../../LICENSE;../../NOTICE;../../THIRD-PARTY-NOTICES.md;../../README.md" Link="%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../licenses/*.txt" Link="licenses/%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
-  <Target Name="ExcludePublishSymbols" AfterTargets="ComputeFilesToPublish" Condition="'$(PublishAot)' == 'true'">
+  <Target Name="ExcludePublishSymbols" AfterTargets="ComputeFilesToPublish">
     <ItemGroup>
-      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Extension)' == '.pdb'" />
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)%(ResolvedFileToPublish.Extension)' == 'av_libglesv2.dll'" />
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'$(PublishAot)' == 'true' and '%(ResolvedFileToPublish.Extension)' == '.pdb'" />
     </ItemGroup>
   </Target>
 </Project>
